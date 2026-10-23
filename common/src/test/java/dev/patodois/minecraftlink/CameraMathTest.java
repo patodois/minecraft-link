@@ -71,6 +71,55 @@ class CameraMathTest {
     }
 
     @Test
+    void viewSpaceIsInMetresForAnyScale() {
+        double[] pos = {1, 2, 3};
+        for (double scale : new double[] {2.0, 0.5, 1.0, 10.0}) {
+            Mapping m = new Mapping(false, false, scale, new double[] {10, -4, 7});
+            float[] view = CameraMath.view(pos, mcViewRotation(0, 0), m);
+            double[] cam = m.toLinkPos(pos[0], pos[1], pos[2]);
+            // yaw 0 faces +Z, which is +Z in link space too: 5 link metres ahead is view z = -5 whatever the scale
+            double[] ahead = CameraMath.transform(view, cam[0], cam[1], cam[2] + 5, 1);
+            assertEquals(-5, ahead[2], 1e-3, "scale " + scale);
+            assertEquals(0, ahead[0], 1e-3, "scale " + scale);
+            assertEquals(0, ahead[1], 1e-3, "scale " + scale);
+            double[] right = CameraMath.transform(view, cam[0] - 3, cam[1] + 2, cam[2] + 1, 1);
+            assertEquals(-1, right[2], 1e-3, "scale " + scale);
+            assertEquals(2, right[1], 1e-3, "scale " + scale);
+            assertEquals(3, right[0], 1e-3, "scale " + scale);
+        }
+    }
+
+    @Test
+    void bobIsMeasuredInBlocksSoItIsConjugatedWithTheScale() {
+        Matrix4f clean = new Matrix4f().perspective((float) Math.toRadians(70), 16f / 9f, FAR, NEAR, true);
+        Matrix4f bob = new Matrix4f().translation(0.02f, -0.03f, 0).rotateZ(0.01f);
+        Matrix4f drawn = new Matrix4f(clean).mul(bob);
+        Mapping m = new Mapping(false, false, 2.0, new double[] {0, 0, 0});
+        float[] metres = CameraMath.view(new double[] {3, 1, -2}, mcViewRotation(20, 5), m);
+        float[] withBob = CameraMath.applyBob(metres, arr(clean), arr(drawn), 2.0);
+        // a link point p' = 2 * w: Minecraft draws bob * R * (w - pos); the contract view is that, times 2
+        double[] w = {4, 2, 1};
+        double[] viaLink = CameraMath.transform(withBob, 2 * w[0], 2 * w[1], 2 * w[2], 1);
+        float[] blocks = CameraMath.view(new double[] {3, 1, -2}, mcViewRotation(20, 5), Mapping.IDENTITY);
+        float[] blocksBob = CameraMath.applyBob(blocks, arr(clean), arr(drawn));
+        double[] expected = CameraMath.transform(blocksBob, w[0], w[1], w[2], 1);
+        for (int i = 0; i < 3; i++) assertEquals(2 * expected[i], viaLink[i], 1e-3, "axis " + i);
+    }
+
+    @Test
+    void normalizeRebuildsTheDepthRowsInMetresForAScale() {
+        float[] rev = arr(new Matrix4f().perspective((float) Math.toRadians(70), 16f / 9f, FAR, NEAR, true));
+        CameraMath.Projection p = CameraMath.normalize(rev, NEAR, FAR, 2.0);
+        assertTrue(p.rewritten());
+        assertEquals(CameraMath.DEPTH_OPENGL, p.depthRange());
+        assertEquals(-1, CameraMath.clipDepthAt(p.matrix(), NEAR * 2), 1e-3);
+        assertEquals(1, CameraMath.clipDepthAt(p.matrix(), FAR * 2), 1e-3);
+        assertEquals(rev[0], p.matrix()[0], 1e-6, "the field of view does not change");
+        assertEquals(rev[5], p.matrix()[5], 1e-6);
+        assertFalse(CameraMath.normalize(rev, NEAR, FAR, 1.0).rewritten());
+    }
+
+    @Test
     void bobIsTheDifferenceBetweenDrawnAndCleanProjection() {
         Matrix4f clean = new Matrix4f().perspective((float) Math.toRadians(70), 16f / 9f, FAR, NEAR, true);
         Matrix4f bob = new Matrix4f().translation(0.02f, -0.03f, 0).rotateZ(0.01f);

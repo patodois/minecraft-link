@@ -97,11 +97,21 @@ public final class CameraMath {
 
     // ------------------------------------------------------------------ view
 
+    /** Uniform scale by {@code k} (x, y, z; w stays 1). */
+    public static float[] uniformScale(double k) {
+        float[] m = identity();
+        m[0] = m[5] = m[10] = (float) k;
+        return m;
+    }
+
     /**
-     * World-to-view in link space: {@code viewRotation * translate(-position) * mappingInverse}.
+     * World-to-view in link space: {@code scale(s) * viewRotation * translate(-position) * mappingInverse}.
      * {@code position} is Minecraft's camera position and {@code viewRotation} Minecraft's rotation-only
      * view matrix; the {@link Mapping} says how Minecraft world coordinates turn into link
-     * coordinates. With the default mapping the result is {@code R * translate(-p)}.
+     * coordinates. The view space is in <b>metres</b> (CONTRACT section 4) whatever the mapping's
+     * {@code scale} (link metres per block): the rotation and translation work in blocks, so the
+     * result is multiplied by the uniform scale {@code s}; a point 5 link metres ahead has view z = -5.
+     * With the default mapping the result is {@code R * translate(-p)}.
      */
     public static float[] view(double[] position, float[] viewRotation, Mapping mapping) {
         // link world w' = F*s*w + o   (F = diag(fx, 1, fz)), so w = F*(w' - o)/s.
@@ -115,7 +125,8 @@ public final class CameraMath {
         inv[12] = (float) (-fx * mapping.offset[0] / s);
         inv[13] = (float) (-mapping.offset[1] / s);
         inv[14] = (float) (-fz * mapping.offset[2] / s);
-        return mul(mcView, inv);
+        float[] v = mul(mcView, inv);
+        return s == 1.0 ? v : mul(uniformScale(s), v);
     }
 
     /**
@@ -125,11 +136,21 @@ public final class CameraMath {
      * Returns {@code view} unchanged when either matrix is missing or the projection is singular.
      */
     public static float[] applyBob(float[] view, float[] cleanProjection, float[] drawnProjection) {
+        return applyBob(view, cleanProjection, drawnProjection, 1.0);
+    }
+
+    /**
+     * As {@link #applyBob(float[], float[], float[])} for a view in metres ({@link #view} with a
+     * mapping scale {@code s}): the bobbing transform is measured in Minecraft's blocks, so it is
+     * conjugated with the scale ({@code S * bob * S^-1}) before it goes in front of the view.
+     */
+    public static float[] applyBob(float[] view, float[] cleanProjection, float[] drawnProjection, double scale) {
         if (cleanProjection == null || drawnProjection == null) return view;
         float[] inv = invert(cleanProjection);
         if (inv == null) return view;
         float[] bob = mul(inv, drawnProjection);
         for (float v : bob) if (!Float.isFinite(v)) return view;
+        if (scale != 1.0) bob = mul(uniformScale(scale), mul(bob, uniformScale(1.0 / scale)));
         return mul(bob, view);
     }
 
@@ -168,10 +189,21 @@ public final class CameraMath {
      * the contract says.
      */
     public static Projection normalize(float[] proj, double near, double far) {
-        int kind = classify(proj, near, far);
-        if (kind == DEPTH_OPENGL || kind == DEPTH_ZERO_TO_ONE || kind == DEPTH_REVERSED) {
+        return normalize(proj, near, far, 1.0);
+    }
+
+    /**
+     * As {@link #normalize(float[], double, double)} with {@code near} and {@code far} in Minecraft's
+     * blocks and the mapping's {@code scale} (link metres per block). The view is in metres
+     * ({@link #view}), so for a scale other than 1 the depth rows are rebuilt from {@code near * scale}
+     * and {@code far * scale}; the x and y scales (the field of view) do not change.
+     */
+    public static Projection normalize(float[] proj, double nearBlocks, double farBlocks, double scale) {
+        int kind = classify(proj, nearBlocks, farBlocks);
+        if (scale == 1.0 && (kind == DEPTH_OPENGL || kind == DEPTH_ZERO_TO_ONE || kind == DEPTH_REVERSED)) {
             return new Projection(proj.clone(), kind, false);
         }
+        double near = nearBlocks * scale, far = farBlocks * scale;
         float[] p = proj.clone();
         // Standard OpenGL perspective depth rows (see the contract's Camera helpers).
         p[2] = 0;

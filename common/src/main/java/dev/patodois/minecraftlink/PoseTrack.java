@@ -16,9 +16,27 @@ public final class PoseTrack {
     private static final int CAP = 16;
     private final Wire.Pose[] ring = new Wire.Pose[CAP];
     private int count;
+    private float[] lastGoodScale = {1, 1, 1};
 
-    /** Adds a pose, keeping time order; a pose older than the newest by more than the ring holds is ignored. */
+    private static boolean finite(float[] v) {
+        for (float f : v) if (!Float.isFinite(f)) return false;
+        return true;
+    }
+
+    /**
+     * Adds a pose, keeping time order; a pose older than the newest by more than the ring holds is ignored.
+     * A guest is another program: a pose with a NaN or infinite position or rotation is dropped, and a NaN or
+     * infinite scale is ignored (the entity keeps the last finite scale, 1 before any).
+     */
     public synchronized void add(Wire.Pose p) {
+        if (!finite(p.translation()) || !finite(p.rotation())) return;
+        boolean scaleOk = finite(p.scale());
+        if (scaleOk) lastGoodScale = p.scale().clone();
+        boolean velOk = finite(p.velocity()), angOk = finite(p.angularVelocity());
+        if (!scaleOk || !velOk || !angOk) {
+            p = new Wire.Pose(p.entity(), p.flags(), p.timeUs(), p.translation(), p.rotation(), scaleOk ? p.scale() : lastGoodScale.clone(),
+                    velOk ? p.velocity() : new float[3], angOk ? p.angularVelocity() : new float[3]);
+        }
         // Insert in time order (poses are normally in order, the link already dropped stale ones).
         int pos = count;
         while (pos > 0 && Long.compareUnsigned(ring[pos - 1].timeUs(), p.timeUs()) > 0) pos--;

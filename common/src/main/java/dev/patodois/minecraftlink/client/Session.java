@@ -57,15 +57,18 @@ final class Session {
     final LinkSettings settings;
     final Mapping mapping;
     final Link link;
-    final dev.patodois.minecraftlink.CameraRing cameraRing = new dev.patodois.minecraftlink.CameraRing(64);
+    final dev.patodois.minecraftlink.CameraRing cameraRing = new dev.patodois.minecraftlink.CameraRing(dev.patodois.minecraftlink.CameraRing.DEFAULT_CAPACITY);
     final LinkRunner runner;
     final String localName;
     final long startedMs = System.currentTimeMillis();
+    /** The control port the host listens on (or the guest connects to), read once so the game thread never asks the link. */
+    final int controlPort;
 
     // ---- game thread -> link thread
     private final AtomicReference<Wire.Camera> cameraOut = new AtomicReference<>();
     private final AtomicReference<CollisionOut> collisionOut = new AtomicReference<>();
     private final AtomicReference<Wire.Pose> poseOut = new AtomicReference<>();
+    private final AtomicReference<Role> focusOut = new AtomicReference<>();
 
     // ---- link thread -> game thread
     final Map<Long, Remote> remotes = new ConcurrentHashMap<>();
@@ -101,6 +104,7 @@ final class Session {
         this.settings = settings;
         this.mapping = settings.mapping();
         this.link = link;
+        this.controlPort = role == Role.HOST ? link.controlPort() : settings.port;
         this.localName = localName;
         this.runner = new LinkRunner(link, this::onEvent, this::tick, 2);
     }
@@ -140,10 +144,13 @@ final class Session {
         return peer == null || focus == role;
     }
 
-    /** Asks (guest) or gives (host) the input focus. Queued onto the link thread's lock; short. */
-    void setFocus(Role to) throws WireException {
-        link.setFocus(to);
+    /**
+     * Asks (guest) or gives (host) the input focus. Never touches {@link Link} (its monitor is held by the link thread's poll
+     * and by {@code close}): the request is queued and the link thread sends it on its next tick.
+     */
+    void setFocus(Role to) {
         if (role == Role.HOST) focus = to;
+        focusOut.set(to);
     }
 
     // ------------------------------------------------------------------ link thread
@@ -155,6 +162,8 @@ final class Session {
                 spawnPending = false;
                 link.spawn(new Control.Spawn(settings.guestEntity, settings.guestProvider, settings.guestAsset, localName));
             }
+            Role wantFocus = focusOut.getAndSet(null);
+            if (wantFocus != null) link.setFocus(wantFocus);
             Wire.Camera cam = cameraOut.getAndSet(null);
             if (cam != null && role == Role.HOST) {
                 lastCameraSeq = link.sendCamera(cam);
@@ -194,6 +203,7 @@ final class Session {
             collisionOut.set(null);
             cameraOut.set(null);
             poseOut.set(null);
+            focusOut.set(null);
             messages.add("link lost: " + l.reason());
         } else if (e instanceof LinkEvent.HandshakeFailed h) {
             messages.add("handshake failed: " + h.reason());
@@ -252,7 +262,7 @@ final class Session {
     String describe() {
         StringBuilder b = new StringBuilder();
         b.append(role.wire).append(" on 127.0.0.1:");
-        b.append(role == Role.HOST ? link.controlPort() : settings.port);
+        b.append(controlPort);
         LinkEvent.PeerInfo p = peer;
         if (p == null) {
             b.append(role == Role.HOST ? ", waiting for a guest" : ", looking for a host");

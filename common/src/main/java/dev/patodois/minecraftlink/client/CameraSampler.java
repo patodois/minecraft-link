@@ -28,8 +28,8 @@ final class CameraSampler {
         double far = cs.depthFar;                // max(4 * render distance * 16, cloud range * 16), blocks
 
         float[] view = CameraMath.view(new double[] {cs.pos.x, cs.pos.y, cs.pos.z}, viewRot, s.mapping);
-        view = CameraMath.applyBob(view, clean, drawn);
-        CameraMath.Projection p = CameraMath.normalize(clean, near * k, far * k);
+        view = CameraMath.applyBob(view, clean, drawn, k);
+        CameraMath.Projection p = CameraMath.normalize(clean, near, far, k);
 
         int w = mc.gameRenderer.mainRenderTarget().width, h = mc.gameRenderer.mainRenderTarget().height;
         Wire.DepthRange dr = switch (p.depthRange()) {

@@ -73,7 +73,8 @@ public final class LinkSettings {
         s.guestEntity = intIn(o, "guest_entity", s.guestEntity, 0, Integer.MAX_VALUE);
         s.guestProvider = str(o, "guest_provider", s.guestProvider);
         s.guestAsset = str(o, "guest_asset", s.guestAsset);
-        s.heartbeatMs = intIn(o, "heartbeat_ms", s.heartbeatMs, 10, 10000);
+        // CONTRACT 8: a hello carries 10 to 10000; a configuration outside it sends the nearest value inside it.
+        s.heartbeatMs = Math.max(10, Math.min(10000, intIn(o, "heartbeat_ms", s.heartbeatMs, Integer.MIN_VALUE, Integer.MAX_VALUE)));
         s.timeoutMs = intIn(o, "timeout_ms", s.timeoutMs, 100, 600000);
         s.showFrames = bool(o, "show_frames", s.showFrames);
         return s;

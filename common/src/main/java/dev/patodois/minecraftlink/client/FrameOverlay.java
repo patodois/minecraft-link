@@ -79,7 +79,15 @@ final class FrameOverlay {
     volatile long framesReprojected;
     volatile String note = "";
 
+    /**
+     * The most pixels per frame this mod takes. CONTRACT 9.6 lets a file be 2^26 pixels (8192 x 8192) and a receiver refuse
+     * larger ones of its own accord: the reprojection runs on the CPU and keeps several copies of the frame, so a 4 Mpixel
+     * frame (2560 x 1600) already costs about a hundred megabytes. A bigger file is refused with a note.
+     */
+    static final long MAX_PIXELS = 4L << 20;
+
     // ---- render thread only
+    private ByteBuffer rgbaBuf, depthBuf, uboBuf; // direct buffers, reused from frame to frame
     private GpuTexture colorTex, depthTex;
     private GpuTextureView colorView, depthView;
     private int texW, texH;
@@ -140,6 +148,12 @@ final class FrameOverlay {
                     if (wantPath != null && !wantPath.equals(failedPath)) {
                         try {
                             reader = PixelFile.Reader.open(Path.of(wantPath));
+                            if ((long) reader.width * reader.height > MAX_PIXELS) {
+                                String why = reader.width + "x" + reader.height + " is more than the " + MAX_PIXELS + " pixels this mod takes";
+                                reader.close();
+                                reader = null;
+                                throw new java.io.IOException(why);
+                            }
                             readerPath = wantPath;
                             LinkManager.LOG.info("pixel file {} mapped: {}x{}, {} slots, depth plane: {}", wantPath, reader.width, reader.height,
                                     reader.slots, reader.hasDepth());
@@ -201,14 +215,31 @@ final class FrameOverlay {
 
     // ------------------------------------------------------------------ render thread
 
+    /**
+     * Render thread, every frame, session or not: frees the textures, the uniform buffer and the pixel buffers after the link
+     * stopped (the worker has no GPU access, and {@link #upload} only runs while a host session exists).
+     */
+    void releaseIfNeeded() {
+        if (needRelease) {
+            needRelease = false;
+            release();
+        }
+    }
+
+    /**
+     * Whether a guest frame is on screen this frame: frames arrived within the last second, the host draws them, and one has
+     * been uploaded. {@link RemoteEntities} hides the placeholder exactly then, so the overlay and the placeholder never
+     * show together and never both disappear. Render thread.
+     */
+    boolean visible(Session s) {
+        return !broken && colorView != null && uploadedVersion != 0 && s.framesFresh();
+    }
+
     /** Start of a frame, no render pass open: upload the newest finished frame. */
     void upload(Minecraft mc, Session s) {
         if (broken) return;
         try {
-            if (needRelease) {
-                needRelease = false;
-                release();
-            }
+            releaseIfNeeded();
             Composed c = composed.get();
             if (c == null || c.version == uploadedVersion) return;
             GpuDevice dev = RenderSystem.getDevice();
@@ -225,14 +256,16 @@ final class FrameOverlay {
                 ubo = dev.createBuffer(() -> "minecraft-link frame uniforms", GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST, 32L);
             }
             CommandEncoder enc = dev.createCommandEncoder();
-            ByteBuffer rgba = ByteBuffer.allocateDirect(c.rgba.length).order(ByteOrder.nativeOrder());
-            rgba.put(c.rgba).flip();
-            enc.writeToTexture(colorTex, rgba, 0, 0, 0, 0, c.width, c.height);
+            if (rgbaBuf == null || rgbaBuf.capacity() != c.rgba.length) rgbaBuf = ByteBuffer.allocateDirect(c.rgba.length).order(ByteOrder.nativeOrder());
+            rgbaBuf.clear();
+            rgbaBuf.put(c.rgba).flip();
+            enc.writeToTexture(colorTex, rgbaBuf, 0, 0, 0, 0, c.width, c.height);
             hasDepthUploaded = c.depth != null;
             if (c.depth != null) {
-                ByteBuffer d = ByteBuffer.allocateDirect(c.depth.length * 4).order(ByteOrder.nativeOrder());
-                d.asFloatBuffer().put(c.depth);
-                enc.writeToTexture(depthTex, d, 0, 0, 0, 0, c.width, c.height);
+                if (depthBuf == null || depthBuf.capacity() != c.depth.length * 4) depthBuf = ByteBuffer.allocateDirect(c.depth.length * 4).order(ByteOrder.nativeOrder());
+                depthBuf.clear();
+                depthBuf.asFloatBuffer().put(c.depth);
+                enc.writeToTexture(depthTex, depthBuf, 0, 0, 0, 0, c.width, c.height);
             }
             uploadedVersion = c.version;
         } catch (RuntimeException e) {
@@ -244,14 +277,17 @@ final class FrameOverlay {
 
     /** End of the level's main pass: draw the guest's frame where it is nearer than the world. */
     void draw(Minecraft mc, Session s) {
-        if (broken || colorView == null || uploadedVersion == 0) return;
+        // Frames that stopped arriving are not drawn: the last picture must not hang in the world (and the placeholder is back, see visible()).
+        if (!visible(s)) return;
         try {
             var target = mc.gameRenderer.mainRenderTarget();
             GpuTextureView out = target.getColorTextureView(), hostDepth = target.getDepthTextureView();
             if (out == null || hostDepth == null) return;
             GpuDevice dev = RenderSystem.getDevice();
             CommandEncoder enc = dev.createCommandEncoder();
-            ByteBuffer u = ByteBuffer.allocateDirect(32).order(ByteOrder.nativeOrder());
+            if (uboBuf == null) uboBuf = ByteBuffer.allocateDirect(32).order(ByteOrder.nativeOrder());
+            ByteBuffer u = uboBuf;
+            u.clear();
             // Minecraft's own near/far (blocks) and depth convention, link metres per block, and whether the guest has depth.
             Std140Builder.intoBuffer(u)
                     .putVec4((float) CameraSampler.hostNear, (float) CameraSampler.hostFar, CameraSampler.hostDepthKind, (float) s.mapping.scale)
@@ -284,6 +320,7 @@ final class FrameOverlay {
         colorView = depthView = null;
         colorTex = depthTex = null;
         ubo = null;
+        rgbaBuf = depthBuf = uboBuf = null; // direct memory goes with the garbage collector once nothing holds the buffers
         uploadedVersion = 0;
         texW = texH = 0;
     }

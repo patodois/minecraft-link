@@ -2,7 +2,6 @@ package dev.patodois.minecraftlink.client;
 
 import dev.patodois.minecraftlink.LinkSettings;
 import dev.patodois.rewritelink.Control.Role;
-import dev.patodois.rewritelink.Wire.WireException;
 import java.io.IOException;
 import java.nio.file.Path;
 import net.minecraft.client.Minecraft;
@@ -56,21 +55,7 @@ public final class LinkManager {
         if (role == Role.HOST && settings.showFrames) frames.start(session);
         guestPublisher.reset();
         LOG.info("link started: {}", session.describe());
-        String warning = loopbackWarning();
-        if (warning != null) LOG.warn(warning);
-        return "link " + session.describe() + (warning == null ? "" : " [!] " + warning);
-    }
-
-    /**
-     * link-java binds and connects to {@code InetAddress.getLoopbackAddress()}, and the protocol needs 127.0.0.1. A JVM started with
-     * {@code -Djava.net.preferIPv6Addresses=system} (what some loaders' launch profiles pass) makes that {@code ::1}, so the other
-     * program, which uses 127.0.0.1, never finds us. Returns a warning in that case, null otherwise.
-     */
-    static String loopbackWarning() {
-        byte[] a = java.net.InetAddress.getLoopbackAddress().getAddress();
-        if (a.length == 4) return null;
-        return "this JVM's loopback address is " + java.net.InetAddress.getLoopbackAddress().getHostAddress() + ", not 127.0.0.1, so a peer on 127.0.0.1 cannot connect;"
-                + " add -Djava.net.preferIPv6Addresses=false to the game's JVM arguments";
+        return "link " + session.describe();
     }
 
     /** Stops the session without blocking the game thread: the bye and the drain happen on a helper thread. */
@@ -85,7 +70,8 @@ public final class LinkManager {
     private void finish(Session s, boolean wait) {
         inputGate.release();
         remoteEntities.discardAll(s);
-        frames.close();
+        frames.close(); // the textures and buffers go on the next frame (releaseIfNeeded), on the render thread
+        scanner.release(); // do not keep the ClientLevel, the shape cache or a half-done scan
         Thread t = new Thread(() -> {
             s.closeBlocking();
             LOG.info("link closed ({} cameras, {} collision snapshots, {} poses sent)", s.camerasSent.get(), s.collisionsSent.get(), s.posesSent.get());
@@ -122,11 +108,7 @@ public final class LinkManager {
         Session s = session;
         if (s == null) return "not running";
         if (!s.isConnected()) return "no peer yet";
-        try {
-            s.setFocus(to);
-        } catch (WireException e) {
-            return "not connected";
-        }
+        s.setFocus(to); // queued: the link thread sends it
         return s.role == Role.HOST ? "input focus given to the " + to.wire : "asked the host for the input focus";
     }
 
@@ -156,6 +138,7 @@ public final class LinkManager {
 
     /** Called on the render thread at the start of every frame's extraction, before entities are extracted. */
     public void beforeExtract(Minecraft mc) {
+        frames.releaseIfNeeded(); // after /link stop or leaving the world there is no session, but the GPU objects must go
         Session s = session;
         if (s == null || s.role != Role.HOST || mc.level == null) return;
         remoteEntities.update(mc, s);

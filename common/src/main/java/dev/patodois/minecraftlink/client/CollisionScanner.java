@@ -55,10 +55,18 @@ final class CollisionScanner implements CollisionBuilder.Shapes {
         cache.clear();
     }
 
+    /**
+     * Lets go of the world: the scanner must not keep the {@link ClientLevel} (chunks, entities, block entities) alive
+     * after the player left it or the link stopped. Game thread; also drops the shape cache and any scan in progress.
+     */
+    void release() {
+        reset();
+        level = null;
+    }
+
     void tick(Minecraft mc, Session s) {
         if (!s.isConnected() || mc.player == null || mc.level == null) return;
         long now = System.currentTimeMillis();
-        level = mc.level;
         double px = mc.player.getX(), py = mc.player.getY(), pz = mc.player.getZ();
         if (building == null) {
             if (busy) return;
@@ -76,6 +84,7 @@ final class CollisionScanner implements CollisionBuilder.Shapes {
             lastZ = pz;
             haveLast = true;
         }
+        level = mc.level;
         long t0 = System.nanoTime();
         while (layer < building.layers() && System.nanoTime() - t0 < BUDGET_NS) {
             building.scanLayer(this, layer++);
@@ -83,8 +92,11 @@ final class CollisionScanner implements CollisionBuilder.Shapes {
         if (layer < building.layers()) return;
         CollisionBuilder done = building;
         building = null;
+        level = null; // only needed while blocks are read; do not hold the world between scans
         busy = true;
-        double cx = px, cy = py, cz = pz;
+        // The geometry is centred on the block the player stood in when the scan started (bx, by, bz), so that is the
+        // snapshot's centre too, not the position the player has walked to while the scan ran.
+        double cx = lastX, cy = lastY, cz = lastZ;
         worker.execute(() -> {
             try {
                 List<float[]> world = done.triangles();
