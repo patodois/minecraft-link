@@ -28,7 +28,7 @@ final class RemoteEntities {
     /** Called in the world pass: the camera transform is loaded and the world is in the colour and depth buffers. */
     void draw(Minecraft mc, Session s, float partialTicks) {
         s.discarded.clear(); // nothing to remove: the cube only exists while it is drawn
-        if (s.framesFresh() || s.remotes.isEmpty()) return;
+        if (LinkManager.INSTANCE.frames.visible(s) || s.remotes.isEmpty()) return;
         Entity view = mc.getRenderViewEntity();
         if (view == null) return;
         double cx = view.lastTickPosX + (view.posX - view.lastTickPosX) * partialTicks;

@@ -34,6 +34,13 @@ class LinkSettingsTest {
     }
 
     @Test
+    void heartbeatIsClampedToTheContractRange() {
+        assertEquals(10, LinkSettings.parse("{\"heartbeat_ms\":1}").heartbeatMs);
+        assertEquals(10000, LinkSettings.parse("{\"heartbeat_ms\":600000}").heartbeatMs);
+        assertEquals(250, LinkSettings.parse("{\"heartbeat_ms\":250}").heartbeatMs);
+    }
+
+    @Test
     void rejectsNonsense() {
         assertThrows(JsonParseException.class, () -> LinkSettings.parse("{\"role\":\"spectator\"}"));
         assertThrows(JsonParseException.class, () -> LinkSettings.parse("{\"port\":0}"));

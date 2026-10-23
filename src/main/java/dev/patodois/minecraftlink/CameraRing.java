@@ -3,8 +3,9 @@ package dev.patodois.minecraftlink;
 /**
  * The cameras sent to the guest, keyed by the {@code seq} of the datagram that carried them
  * (CONTRACT.md 9.7). A frame names the camera it was rendered with by that number, so the host can
- * look it up and reproject the frame to the camera it presents now. 32 entries cover at least half a
- * second at 60 Hz; this ring keeps 64.
+ * look it up and reproject the frame to the camera it presents now. The contract asks for at least half a
+ * second; the capacity is sized by time ({@link #capacityFor}), not by a frame count that only fits one
+ * frame rate: {@link #DEFAULT_CAPACITY} covers a second at 240 fps.
  */
 public final class CameraRing {
     /** A camera as sent: world to view and view to clip, column-major, link space. */
@@ -44,11 +45,24 @@ public final class CameraRing {
         }
     }
 
+    /** One second at 240 fps (twice the contract's half second), rounded up to a power of two. */
+    public static final int DEFAULT_CAPACITY = capacityFor(1.0, 240);
+
     private final Entry[] ring;
     private int next;
 
     public CameraRing(int capacity) {
         ring = new Entry[capacity];
+    }
+
+    /** Entries needed to keep {@code seconds} of cameras sent at {@code fps} per second, rounded up to a power of two. */
+    public static int capacityFor(double seconds, double fps) {
+        double n = Math.ceil(seconds * fps);
+        if (!(n >= 1)) return 1;
+        if (n > (1 << 20)) return 1 << 20;
+        int c = 1;
+        while (c < n) c <<= 1;
+        return c;
     }
 
     public synchronized void put(Entry e) {
