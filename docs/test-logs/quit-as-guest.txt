@@ -1,0 +1,26 @@
+# peer log (quit-as-guest)
+[host   0.00s] listening on 127.0.0.1:47835
+[host   0.33s] connected: guest "Minecraft Java 26.3", protocol v1, session 0x68deb194, guest udp 127.0.0.1:55675
+[host   0.35s] guest spawned entity 1 = Minecraft asset "minecraft:player"
+[host   1.02s] sent 37 cameras; got 13 poses in 13 datagrams, 0 frames; presented 0 (age mean 0.0 ms, max 0.0 ms); last pose Some([0.5, 0.0, 7.5]); pose latency 5672 us; malformed 0 stale 0 foreign 0
+[host   2.00s] sent 51 cameras; got 20 poses in 20 datagrams, 0 frames; presented 0 (age mean 0.0 ms, max 0.0 ms); last pose Some([0.5, 0.0, 7.5]); pose latency 9440 us; malformed 0 stale 0 foreign 0
+[host   3.01s] sent 53 cameras; got 20 poses in 20 datagrams, 0 frames; presented 0 (age mean 0.0 ms, max 0.0 ms); last pose Some([0.5, 0.0, 7.5]); pose latency 15487 us; malformed 0 stale 0 foreign 0
+[host   4.01s] sent 52 cameras; got 20 poses in 20 datagrams, 0 frames; presented 0 (age mean 0.0 ms, max 0.0 ms); last pose Some([0.5, 0.0, 7.5]); pose latency 15245 us; malformed 0 stale 0 foreign 0
+[host   4.87s] guest despawned entity 1
+[host   4.87s] LOST the guest: peer said bye: closing
+[host  40.00s] done
+
+# client log lines from the mod and the test driver (quit-as-guest)
+[13:51:06] [Render thread/INFO] (minecraft-link) autotest: 9 lines from scripts/quit_as_guest.txt, screenshots to mclink
+[13:51:06] [Render thread/INFO] (minecraft-link) Minecraft Link loaded; commands: /link host, /link guest, /link stop, /link status, /link focus <host|guest>
+[13:51:11] [Render thread/INFO] (minecraft-link) autotest: confirming 'Warning! These settings are using experimental features' with 'Yes'
+[13:51:20] [Render thread/INFO] (minecraft-link) autotest: /tp @s 0.5 4 7 180 0
+[13:51:20] [Render thread/INFO] (minecraft-link) autotest: tick 200 line 4/9 screen=none level=true
+[13:51:21] [Render thread/INFO] (minecraft-link) link started: guest on 127.0.0.1:47835, looking for a host; sent 0 poses; received 0 cameras; datagrams in/out 0/0, malformed 0, stale 0, foreign 0
+[13:51:21] [Render thread/INFO] (minecraft-link) autotest: link guest 47835 -> link guest on 127.0.0.1:47835, looking for a host; sent 0 poses; received 0 cameras; datagrams in/out 0/0, malformed 0, stale 0, foreign 0
+[13:51:22] [Render thread/INFO] (minecraft-link) connected to Fake Host (host, protocol v1)
+[13:51:22] [Render thread/INFO] (Minecraft) [System] [CHAT] [link] connected to Fake Host (host, protocol v1)
+[13:51:27] [Render thread/INFO] (minecraft-link) autotest: link status -> guest on 127.0.0.1:47835, connected to Fake Host (session 68deb194), input focus with the host; sent 89 poses; received 237 cameras; datagrams in/out 275/107, malformed 0, stale 0, foreign 0
+[13:51:27] [Render thread/INFO] (minecraft-link) autotest: quitting the game while the link is up (no /link stop)
+[13:51:27] [Render thread/INFO] (minecraft-link) autotest: done, closing the game
+[13:51:27] [minecraft-link-close/INFO] (minecraft-link) link closed (0 cameras, 0 collision snapshots, 90 poses sent)

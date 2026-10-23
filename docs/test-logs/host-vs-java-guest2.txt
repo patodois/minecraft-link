@@ -1,0 +1,40 @@
+# peer log (host-vs-java-guest2)
+[java-guest   0.04s] connecting to 127.0.0.1:47832
+[java-guest   0.08s] connected: host "Minecraft Java 26.3", protocol v1, session 0x75a28b1f
+[java-guest   0.32s] collision query 1: 6948 triangles within 16.0 m of [0.5, 0.0, 0.5]
+[java-guest   1.01s] got 55 cameras; sent 55 poses; focus with the host
+[java-guest   2.00s] got 60 cameras; sent 60 poses; focus with the host
+[java-guest   2.07s] asking the host for input focus
+[java-guest   3.00s] got 60 cameras; sent 60 poses; focus with the host
+[java-guest   4.00s] got 54 cameras; sent 54 poses; focus with the host
+[java-guest   5.00s] got 54 cameras; sent 54 poses; focus with the host
+[java-guest   5.40s] collision query 2: 6948 triangles within 16.0 m of [0.5, 0.0, 0.5]
+[java-guest   6.00s] got 53 cameras; sent 53 poses; focus with the host
+[java-guest   6.56s] LOST the host: peer said bye: closing
+[java-guest  60.00s] done
+
+# client log lines from the mod and the test driver (host-vs-java-guest2)
+[13:55:06] [Render thread/INFO] (minecraft-link) autotest: 23 lines from scripts/host_vs_java2.txt, screenshots to mclink
+[13:55:06] [Render thread/INFO] (minecraft-link) Minecraft Link loaded; commands: /link host, /link guest, /link stop, /link status, /link focus <host|guest>
+[13:55:12] [Render thread/INFO] (minecraft-link) autotest: confirming 'Warning! These settings are using experimental features' with 'Yes'
+[13:55:20] [Render thread/INFO] (minecraft-link) autotest: /gamemode creative
+[13:55:20] [Render thread/INFO] (minecraft-link) autotest: /tp @s 0 4 0 0 0
+[13:55:21] [Render thread/INFO] (minecraft-link) autotest: tick 200 line 5/23 screen=none level=true
+[13:55:22] [Render thread/INFO] (minecraft-link) link started: host on 127.0.0.1:47832, waiting for a guest; sent 0 cameras, 0 collision snapshots (0 triangles); received 0 poses, 0 frames; 0 guest entities; datagrams in/out 0/0, malformed 0, stale 0, foreign 0
+[13:55:22] [Render thread/INFO] (minecraft-link) autotest: link host 47832 -> link host on 127.0.0.1:47832, waiting for a guest; sent 0 cameras, 0 collision snapshots (0 triangles); received 0 poses, 0 frames; 0 guest entities; datagrams in/out 0/0, malformed 0, stale 0, foreign 0
+[13:55:25] [Render thread/INFO] (minecraft-link) connected to Java Guest (guest, protocol v1)
+[13:55:25] [Render thread/INFO] (Minecraft) [System] [CHAT] [link] connected to Java Guest (guest, protocol v1)
+[13:55:25] [Render thread/INFO] (minecraft-link) guest spawned entity 1 (Java Guest demo/cube)
+[13:55:25] [Render thread/INFO] (Minecraft) [System] [CHAT] [link] guest spawned entity 1 (Java Guest demo/cube)
+[13:55:25] [Render thread/INFO] (minecraft-link) showing guest entity 1 (Java Guest demo/cube) as a block display
+[13:55:27] [Render thread/INFO] (minecraft-link) the guest asks for the input focus (/link focus guest to give it)
+[13:55:27] [Render thread/INFO] (Minecraft) [System] [CHAT] [link] the guest asks for the input focus (/link focus guest to give it)
+[13:55:28] [Render thread/INFO] (minecraft-link) autotest: screenshot mclink/host-java-orbit-a.png (1708x960)
+[13:55:29] [Render thread/INFO] (minecraft-link) autotest: screenshot mclink/host-java-orbit-b.png (1708x960)
+[13:55:30] [Render thread/INFO] (minecraft-link) autotest: screenshot mclink/host-java-orbit-c.png (1708x960)
+[13:55:31] [Render thread/INFO] (minecraft-link) autotest: screenshot mclink/host-java-orbit-d.png (1708x960)
+[13:55:31] [Render thread/INFO] (minecraft-link) autotest: tick 400 line 19/23 screen=none level=true
+[13:55:31] [Render thread/INFO] (minecraft-link) autotest: link status -> host on 127.0.0.1:47832, connected to Java Guest (session 75a28b1f), input focus with the host; sent 363 cameras, 2 collision snapshots (6948 triangles); received 363 poses, 0 frames; 1 guest entities; datagrams in/out 389/451, malformed 0, stale 0, foreign 0; frames drawn 0, reprojected 0, host depth convention -1, camera d
+[13:55:31] [Render thread/INFO] (minecraft-link) autotest: link stop -> stopping the link (bye, then half-close)
+[13:55:31] [minecraft-link-close/INFO] (minecraft-link) link closed (363 cameras, 2 collision snapshots, 0 poses sent)
+[13:55:33] [Render thread/INFO] (minecraft-link) autotest: done, closing the game
