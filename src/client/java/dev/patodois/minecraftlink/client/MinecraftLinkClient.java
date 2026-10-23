@@ -14,6 +14,7 @@ public final class MinecraftLinkClient implements ClientModInitializer {
 		ClientCommandRegistrationCallback.EVENT.register((dispatcher, buildContext) -> LinkCommands.register(dispatcher));
 		ClientTickEvents.END_CLIENT_TICK.register(m::onClientTick);
 		LevelRenderEvents.START_MAIN.register(ctx -> m.onLevelStart(net.minecraft.client.Minecraft.getInstance(), ctx.levelState().cameraRenderState));
+		LevelRenderEvents.END_MAIN.register(ctx -> m.onLevelEnd(net.minecraft.client.Minecraft.getInstance()));
 		ClientLifecycleEvents.CLIENT_STOPPING.register(client -> m.shutdown());
 		AutoTest.maybeStart();
 		LinkManager.LOG.info("Minecraft Link loaded; commands: /link host, /link guest, /link stop, /link status, /link focus <host|guest>");

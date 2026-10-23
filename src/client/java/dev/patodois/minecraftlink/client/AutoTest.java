@@ -32,6 +32,7 @@ import net.minecraft.client.player.LocalPlayer;
  *   look YAW PITCH          set the player's view
  *   shot NAME               save NAME.png into minecraftlink.shots
  *   log TEXT                write a line to the log
+ *   leave                   leave the world to the title screen
  *   quit                    close the game
  * </pre>
  */
@@ -200,6 +201,11 @@ final class AutoTest {
             }
             case "log" -> {
                 LinkManager.LOG.info("autotest: {}", arg);
+                return true;
+            }
+            case "leave" -> {
+                LinkManager.LOG.info("autotest: leaving the world (no /link stop)");
+                mc.disconnectWithSavingScreen();
                 return true;
             }
             case "quit" -> {

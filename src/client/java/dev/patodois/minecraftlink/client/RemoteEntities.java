@@ -41,6 +41,11 @@ final class RemoteEntities {
         for (Session.Remote r : s.remotes.values()) {
             PoseTrack.Sample smp = r.track.at(atUs);
             if (smp == null) continue;
+            if (s.framesFresh()) {
+                // the guest's own rendering is on screen: no placeholder
+                if (r.display != null) remove(r);
+                continue;
+            }
             Display.BlockDisplay d = (Display.BlockDisplay) r.display;
             if (d == null || d.level() != level || d.isRemoved()) {
                 d = create(level, r);

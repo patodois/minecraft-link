@@ -47,6 +47,7 @@ public final class LinkManager {
             return "could not start the " + role.wire + ": " + e.getMessage();
         }
         scanner.reset();
+        if (role == Role.HOST && settings.showFrames) frames.start(session);
         guestPublisher.reset();
         LOG.info("link started: {}", session.describe());
         return "link " + session.describe();
@@ -90,7 +91,11 @@ public final class LinkManager {
 
     String status() {
         Session s = session;
-        return s == null ? "not running (config role: " + settings.role + ", port " + settings.port + ")" : s.describe();
+        if (s == null) return "not running (config role: " + settings.role + ", port " + settings.port + ")";
+        String f = s.role == Role.HOST ? "; frames drawn " + frames.framesShown + ", reprojected " + frames.framesReprojected
+                + (frames.note.isEmpty() ? "" : " (" + frames.note + ")") + ", host depth convention " + CameraSampler.hostDepthKind
+                + (CameraSampler.lastRewritten ? ", camera depth_range rewritten to " + CameraSampler.lastDepthRange : ", camera depth_range " + CameraSampler.lastDepthRange) : "";
+        return s.describe() + f;
     }
 
     String focus(Role to) {
@@ -134,6 +139,7 @@ public final class LinkManager {
         Session s = session;
         if (s == null || s.role != Role.HOST || mc.level == null) return;
         remoteEntities.update(mc, s);
+        frames.upload(mc, s);
     }
 
     /** Called on the render thread once per drawn frame, with the camera Minecraft is about to render with. */
@@ -141,6 +147,12 @@ public final class LinkManager {
         Session s = session;
         if (s == null || s.role != Role.HOST || !s.isConnected()) return;
         CameraSampler.sample(mc, s, camera);
-        frames.update(mc, s);
+    }
+
+    /** Render thread, end of the level's main pass. */
+    public void onLevelEnd(Minecraft mc) {
+        Session s = session;
+        if (s == null || s.role != Role.HOST || !s.isConnected()) return;
+        frames.draw(mc, s);
     }
 }

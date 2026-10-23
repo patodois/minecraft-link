@@ -57,6 +57,7 @@ final class Session {
     final LinkSettings settings;
     final Mapping mapping;
     final Link link;
+    final dev.patodois.minecraftlink.CameraRing cameraRing = new dev.patodois.minecraftlink.CameraRing(64);
     final LinkRunner runner;
     final String localName;
     final long startedMs = System.currentTimeMillis();
@@ -76,6 +77,12 @@ final class Session {
     volatile Role focus = Role.HOST;
     volatile boolean closed;
     volatile int lastCameraSeq;
+    /** Wall-clock ms of the last Frame datagram; while frames flow the placeholder block is hidden. */
+    volatile long lastFrameMs;
+
+    boolean framesFresh() {
+        return System.currentTimeMillis() - lastFrameMs < 1000;
+    }
 
     final AtomicLong camerasSent = new AtomicLong();
     final AtomicLong collisionsSent = new AtomicLong();
@@ -150,6 +157,7 @@ final class Session {
             Wire.Camera cam = cameraOut.getAndSet(null);
             if (cam != null && role == Role.HOST) {
                 lastCameraSeq = link.sendCamera(cam);
+                cameraRing.put(new dev.patodois.minecraftlink.CameraRing.Entry(lastCameraSeq, cam.view(), cam.proj(), cam.near(), cam.far()));
                 camerasSent.incrementAndGet();
             }
             CollisionOut col = collisionOut.getAndSet(null);
@@ -221,6 +229,7 @@ final class Session {
                     + fc.channel().height());
         } else if (e instanceof LinkEvent.Frame f) {
             framesReceived.incrementAndGet();
+            lastFrameMs = System.currentTimeMillis();
             latestFrame.set(f);
         }
     }
