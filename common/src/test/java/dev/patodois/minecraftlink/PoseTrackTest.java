@@ -14,6 +14,34 @@ class PoseTrackTest {
     }
 
     @Test
+    void aNonFiniteScaleIsIgnored() {
+        PoseTrack t = new PoseTrack();
+        float[] rot = {0, 0, 0, 1};
+        t.add(new Wire.Pose(1, 0, 1_000_000, new float[3], rot, new float[] {2, 2, 2}, new float[3], new float[3]));
+        t.add(new Wire.Pose(1, 0, 1_100_000, new float[3], rot, new float[] {Float.NaN, 1, 1}, new float[3], new float[3]));
+        t.add(new Wire.Pose(1, 0, 1_200_000, new float[3], rot, new float[] {1, Float.POSITIVE_INFINITY, 1}, new float[3], new float[3]));
+        for (long us = 900_000; us < 1_400_000; us += 50_000) {
+            for (float v : t.at(us).scale()) assertEquals(2f, v, "scale at " + us + " stays the last finite one");
+        }
+        // before any finite scale the entity is drawn at scale 1
+        PoseTrack u = new PoseTrack();
+        u.add(new Wire.Pose(1, 0, 1_000_000, new float[3], rot, new float[] {Float.NaN, Float.NaN, Float.NaN}, new float[3], new float[3]));
+        assertEquals(1f, u.at(1_000_000).scale()[0]);
+    }
+
+    @Test
+    void aPoseWithANonFinitePositionIsDropped() {
+        PoseTrack t = new PoseTrack();
+        float[] one = {1, 1, 1};
+        t.add(new Wire.Pose(1, 0, 1_000_000, new float[] {Float.NaN, 0, 0}, new float[] {0, 0, 0, 1}, one, new float[3], new float[3]));
+        t.add(new Wire.Pose(1, 0, 1_000_000, new float[3], new float[] {0, 0, 0, Float.NaN}, one, new float[3], new float[3]));
+        assertNull(t.at(1_000_000));
+        // an infinite velocity must not poison the extrapolation
+        t.add(new Wire.Pose(1, 0, 1_000_000, new float[3], new float[] {0, 0, 0, 1}, one, new float[] {Float.POSITIVE_INFINITY, 0, 0}, new float[3]));
+        assertEquals(0.0, t.at(1_100_000).translation()[0], 1e-9);
+    }
+
+    @Test
     void interpolatesBetweenTheTwoSamplesAroundTheTime() {
         PoseTrack t = new PoseTrack();
         t.add(pose(1_000_000, 0, 10, 0));

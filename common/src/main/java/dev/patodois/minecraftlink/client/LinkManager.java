@@ -2,7 +2,6 @@ package dev.patodois.minecraftlink.client;
 
 import dev.patodois.minecraftlink.LinkSettings;
 import dev.patodois.rewritelink.Control.Role;
-import dev.patodois.rewritelink.Wire.WireException;
 import java.io.IOException;
 import java.nio.file.Path;
 import net.minecraft.client.Camera;
@@ -73,7 +72,8 @@ public final class LinkManager {
     private void finish(Session s, boolean wait) {
         inputGate.release();
         remoteEntities.discardAll(s);
-        frames.close();
+        frames.close(); // the textures and buffers go on the next frame (releaseIfNeeded), on the render thread
+        scanner.release(); // do not keep the ClientLevel, the shape cache or a half-done scan
         Thread t = new Thread(() -> {
             s.closeBlocking();
             LOG.info("link closed ({} cameras, {} collision snapshots, {} poses sent)", s.camerasSent.get(), s.collisionsSent.get(), s.posesSent.get());
@@ -111,11 +111,7 @@ public final class LinkManager {
         Session s = session;
         if (s == null) return "not running";
         if (!s.isConnected()) return "no peer yet";
-        try {
-            s.setFocus(to);
-        } catch (WireException e) {
-            return "not connected";
-        }
+        s.setFocus(to); // queued: the link thread sends it
         return s.role == Role.HOST ? "input focus given to the " + to.wire : "asked the host for the input focus";
     }
 
@@ -145,6 +141,7 @@ public final class LinkManager {
 
     /** Called on the render thread at the start of every frame's level render, before entities are drawn. */
     public void beforeEntities(Minecraft mc) {
+        frames.releaseIfNeeded(); // after /link stop or leaving the world there is no session, but the GPU objects must go
         Session s = session;
         if (s == null || s.role != Role.HOST || mc.level == null) return;
         remoteEntities.update(mc, s);

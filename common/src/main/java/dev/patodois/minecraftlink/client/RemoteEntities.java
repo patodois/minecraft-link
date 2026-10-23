@@ -43,7 +43,7 @@ final class RemoteEntities {
         for (Session.Remote r : s.remotes.values()) {
             PoseTrack.Sample smp = r.track.at(atUs);
             if (smp == null) continue;
-            if (s.framesFresh()) {
+            if (LinkManager.INSTANCE.frames.visible(s)) {
                 // the guest's own rendering is on screen: no placeholder
                 if (r.display != null) remove(r);
                 continue;
@@ -60,6 +60,8 @@ final class RemoteEntities {
             d.setXRot((float) yp[1]);
             d.setOldPosAndRot();
             float[] sc = smp.scale();
+            // A guest could send NaN or infinity (NaN != NaN would reload the display every frame): ignore such a scale.
+            if (!Float.isFinite(sc[0]) || !Float.isFinite(sc[1]) || !Float.isFinite(sc[2])) continue;
             if (sc[0] != r.lastScaleX || sc[1] != r.lastScaleY || sc[2] != r.lastScaleZ) {
                 r.lastScaleX = sc[0];
                 r.lastScaleY = sc[1];

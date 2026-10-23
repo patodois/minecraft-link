@@ -46,8 +46,8 @@ final class CameraSampler {
 
         Vec3 pos = camera.getPosition();
         float[] view = CameraMath.view(new double[] {pos.x, pos.y, pos.z}, viewRot, s.mapping);
-        view = CameraMath.applyBob(view, clean, drawn);
-        CameraMath.Projection p = CameraMath.normalize(clean, near * k, far * k);
+        view = CameraMath.applyBob(view, clean, drawn, k);
+        CameraMath.Projection p = CameraMath.normalize(clean, near, far, k);
 
         var target = mc.getMainRenderTarget();
         int w = target.width, h = target.height;
