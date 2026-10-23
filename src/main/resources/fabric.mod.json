@@ -1,0 +1,25 @@
+{
+	"schemaVersion": 1,
+	"id": "minecraft_link",
+	"version": "${version}",
+	"name": "Minecraft Link",
+	"description": "Speaks the rewrite-bridge passthrough link protocol, so Minecraft can be a host or a guest next to another game or rewrite. Not affiliated with Mojang or Microsoft.",
+	"authors": ["patodois"],
+	"license": "MIT OR Apache-2.0",
+	"environment": "client",
+	"entrypoints": {
+		"client": ["dev.patodois.minecraftlink.client.MinecraftLinkClient"]
+	},
+	"mixins": [
+		{
+			"config": "minecraft_link.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.20.1",
+		"minecraft": "~26.3",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}
