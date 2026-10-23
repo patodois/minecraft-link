@@ -1,0 +1,55 @@
+# neoforge-host: Minecraft 1.20.1 on macOS (Apple M5), peak RSS of the game JVM: 2137 MB
+# game log (mod and autotest lines):
+[main/INFO] [cp.mo.mo.Launcher/MODLAUNCHER]: ModLauncher running: args [--launchTarget, forgeclientuserdev, --version, MOD_DEV, --assetIndex, 5, --assetsDir, ~/.gradle/caches/neoformruntime/assets, --gameDir, ., --fml.forgeVersion, 47.1.106, --fml.fmlVersion, 47.2.2, --fml.mcVersion, 1.20.1, --fml.mcpVersion, 20230612.114412]
+[main/INFO] [cp.mo.mo.Launcher/MODLAUNCHER]: ModLauncher 10.0.10+10.0.10+main.22f00f84 starting: java version 17.0.20.1 by Azul Systems, Inc.; OS Mac OS X arch aarch64 version 26.6.2
+[main/INFO] [mixin/]: SpongePowered MIXIN Subsystem Version=0.8.5 Source=union:~/.gradle/caches/modules-2/files-2.1/org.spongepowered/mixin/0.8.5/9d1c0c3a304ae6697ecd477218fa61b850bf57fc/mixin-0.8.5.jar%23181!/ Service=ModLauncher Env=CLIENT
+[Render thread/WARN] [minecraft/VanillaPackResourcesBuilder]: Assets URL 'union:~/minecraft-link-1.20.1/neoforge/build/moddev/artifacts/forge-1.20.1-47.1.106.jar%23184!/assets/.mcassetsroot' uses unexpected schema
+[Render thread/WARN] [minecraft/VanillaPackResourcesBuilder]: Assets URL 'union:~/minecraft-link-1.20.1/neoforge/build/moddev/artifacts/forge-1.20.1-47.1.106.jar%23184!/data/.mcassetsroot' uses unexpected schema
+[modloading-worker-0/INFO] [minecraft-link/]: autotest: 46 lines from ~/minecraft-link-1.20.1/autotest/host_wall.txt, screenshots to <scratch>/mclink-1201/neoforge-host/shots
+[modloading-worker-0/INFO] [minecraft-link/]: Minecraft Link loaded on NeoForge; commands: /link host, /link guest, /link stop, /link status, /link focus <host|guest>
+[modloading-worker-0/INFO] [ne.mi.co.MinecraftForge/FORGE]: NeoForge v47.1.106 Initialized
+[Render thread/INFO] [minecraft-link/]: autotest: /gamemode creative
+[Render thread/INFO] [minecraft-link/]: autotest: /tp @s 0.0 -60 7.5 180 0
+[Render thread/INFO] [minecraft-link/]: link started: host on 127.0.0.1:47833, waiting for a guest; sent 0 cameras, 0 collision snapshots (0 triangles); received 0 poses, 0 frames; 0 guest entities; datagrams in/out 0/0, malformed 0, stale 0, foreign 0
+[Render thread/INFO] [minecraft-link/]: autotest: link host 47833 -> link host on 127.0.0.1:47833, waiting for a guest; sent 0 cameras, 0 collision snapshots (0 triangles); received 0 poses, 0 frames; 0 guest entities; datagrams in/out 0/0, malformed 0, stale 0, foreign 0
+[Render thread/INFO] [minecraft-link/]: connected to Fake Guest (guest, protocol v1)
+[minecraft-link-frames/INFO] [minecraft-link/]: pixel file /var/folders/3j/xwr0chjs1wxghh4f209rllxw0000gn/T/rewrite-bridge-46587-guest-6cc313b9-0.frames mapped: 320x240, 3 slots, depth plane: true
+[Render thread/INFO] [minecraft-link/]: showing guest entity 1 (Fake Guest demo/cube) as a block display
+[Render thread/INFO] [minecraft-link/]: guest spawned entity 1 (Fake Guest demo/cube)
+[Render thread/INFO] [minecraft-link/]: peer announced a pixel file: /var/folders/3j/xwr0chjs1wxghh4f209rllxw0000gn/T/rewrite-bridge-46587-guest-6cc313b9-0.frames 320x240
+[Render thread/INFO] [minecraft-link/]: frame pass ready: GL_VERSION 4.1 Metal - 90.5, GLSL 4.10, renderer Apple M5, vendor Apple
+[Render thread/INFO] [minecraft-link/]: the guest asks for the input focus (/link focus guest to give it)
+[Render thread/INFO] [minecraft-link/]: autotest: screenshot <scratch>/mclink-1201/neoforge-host/shots/1-open-field.png (1708x960)
+[Render thread/INFO] [minecraft-link/]: autotest: /fill 0 -60 5 2 -59 5 minecraft:stone
+[Render thread/INFO] [minecraft-link/]: autotest: screenshot <scratch>/mclink-1201/neoforge-host/shots/2-wall-hides-right-half.png (1708x960)
+[Render thread/INFO] [minecraft-link/]: autotest: link status -> host on 127.0.0.1:47833, connected to Fake Guest (session 6cc313b9), input focus with the host; sent 992 cameras, 3 collision snapshots (4628 triangles); received 992 poses, 988 frames; 1 guest entities; datagrams in/out 2016/1091, malformed 0, stale 0, foreign 0; frames drawn 987, reprojected 1503 (pixel file 320x240 with depth), host depth convention 0, camera depth_range 0; GL_VERSION 4.1 Metal - 90.5, GLSL 4.10, renderer Apple M5, vendor Apple
+[Render thread/INFO] [minecraft-link/]: autotest: /fill 0 -60 5 2 -59 5 minecraft:air
+[Render thread/INFO] [minecraft-link/]: autotest: screenshot <scratch>/mclink-1201/neoforge-host/shots/3-wall-removed.png (1708x960)
+[Render thread/INFO] [minecraft-link/]: autotest: /fill -3 -60 1 3 -59 1 minecraft:stone
+[Render thread/INFO] [minecraft-link/]: autotest: screenshot <scratch>/mclink-1201/neoforge-host/shots/4-wall-behind-cube.png (1708x960)
+[Render thread/INFO] [minecraft-link/]: autotest: /fill -3 -60 1 3 -59 1 minecraft:air
+[Render thread/INFO] [minecraft-link/]: autotest: screenshot <scratch>/mclink-1201/neoforge-host/shots/5-hud-on.png (1708x960)
+[Render thread/INFO] [minecraft-link/]: autotest: link stop -> stopping the link (bye, then half-close)
+[minecraft-link-close/INFO] [minecraft-link/]: link closed (1775 cameras, 6 collision snapshots, 0 poses sent)
+[Render thread/INFO] [minecraft-link/]: autotest: done, closing the game
+
+# peer log (rewrite-bridge example, first and last lines):
+[guest   0.00s] connecting to 127.0.0.1:47833
+[guest  25.19s] connected: host "Minecraft Java 1.20.1", protocol v1, session 0x6cc313b9
+[guest  25.20s] pixel file /var/folders/3j/xwr0chjs1wxghh4f209rllxw0000gn/T/rewrite-bridge-46587-guest-6cc313b9-0.frames (320x240, depth: true, latency 40 ms)
+[guest  25.21s] cube placed 4 m ahead of the camera at [-0.0, 1.62, 3.5]
+[guest  25.26s] collision query 1: 4596 triangles within 16 m of [0.0, 0.0, 7.5]
+[guest  25.26s] cube stands on the host's ground at y 0.00
+[guest  26.00s] got 89 cameras; sent 89 poses, 85 frames (render 0.1 ms each); focus with the host
+[guest  27.00s] got 112 cameras; sent 112 poses, 111 frames (render 0.1 ms each); focus with the host
+[guest  27.20s] asking the host for input focus
+[guest  28.00s] got 112 cameras; sent 112 poses, 112 frames (render 0.1 ms each); focus with the host
+[guest  29.00s] got 111 cameras; sent 111 poses, 112 frames (render 0.1 ms each); focus with the host
+[guest  30.00s] got 112 cameras; sent 112 poses, 111 frames (render 0.1 ms each); focus with the host
+...
+[guest  38.00s] got 109 cameras; sent 109 poses, 109 frames (render 0.2 ms each); focus with the host
+[guest  39.00s] got 111 cameras; sent 111 poses, 112 frames (render 0.1 ms each); focus with the host
+[guest  39.65s] collision query 6: 4596 triangles within 16 m of [0.0, 0.0, 7.5]
+[guest  40.00s] got 107 cameras; sent 107 poses, 106 frames (render 0.1 ms each); focus with the host
+[guest  41.00s] got 111 cameras; sent 111 poses, 112 frames (render 0.1 ms each); focus with the host
+[guest  41.40s] LOST the host: peer said bye: closing

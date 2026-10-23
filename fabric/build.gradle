@@ -1,5 +1,5 @@
 plugins {
-	id 'net.fabricmc.fabric-loom'
+	id 'fabric-loom'
 }
 apply from: rootProject.file('gradle/loader.gradle')
 
@@ -25,8 +25,9 @@ loom {
 
 dependencies {
 	minecraft "com.mojang:minecraft:${rootProject.minecraft_version}"
-	implementation "net.fabricmc:fabric-loader:${rootProject.loader_version}"
-	implementation "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_version}"
+	mappings loom.officialMojangMappings()
+	modImplementation "net.fabricmc:fabric-loader:${rootProject.loader_version}"
+	modImplementation "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_version}"
 
 	// The passthrough link protocol (pure Java), built from ../link-java and bundled into the jar (jar-in-jar).
 	implementation "dev.patodois:link-java:${rootProject.link_java_version}"

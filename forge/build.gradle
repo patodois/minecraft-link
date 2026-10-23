@@ -1,68 +1,64 @@
 plugins {
 	id 'net.minecraftforge.gradle'
-	id 'net.minecraftforge.jarjar'
 }
 apply from: rootProject.file('gradle/loader.gradle')
 
 minecraft {
+	// Mojang's official names in the source; reobfJar turns them into the SRG names Forge 1.20.1 runs with.
+	mappings channel: 'official', version: rootProject.minecraft_version
+	// the dev run takes classes and resources from build/ (processResources runs first)
+	copyIdeResources = true
+
 	runs {
 		configureEach {
-			workingDir = layout.projectDirectory.dir('run')
-			systemProperty 'eventbus.api.strictRuntimeChecks', 'true'
+			workingDirectory project.file('run')
 		}
-
-		register('client') {
-			// Forge finds a mixin config through the jar's manifest; in the dev run there is no jar, so name it here.
-			args '--mixin.config=minecraft_link.mixins.json'
+		client {
 			// The Mac has 16 GB shared with other builds: keep the game small.
 			jvmArgs '-Xmx2G'
 			// macOS: the window system must run on the first thread (Loom and ModDevGradle add this themselves; ForgeGradle does not).
 			if (System.getProperty('os.name').toLowerCase().contains('mac')) jvmArgs '-XstartOnFirstThread'
-			// The loader's launch profile passes -Djava.net.preferIPv6Addresses=system (see NeoForge's build file for why that matters here).
-			// ForgeGradle puts its own -D...=system first on the command line, so ours goes there as a JVM argument, after it.
-			jvmArgs '-Djava.net.preferIPv6Addresses=false'
 			// Scripted runs (see AutoTest): ./gradlew :forge:runClient -Pautotest=/path/script.txt -Pshots=/path/dir
 			if (project.hasProperty('autotest')) {
-				systemProperty 'minecraftlink.autotest', project.property('autotest')
-				systemProperty 'minecraftlink.shots', project.hasProperty('shots') ? project.property('shots') : 'run/shots'
+				property 'minecraftlink.autotest', project.property('autotest')
+				property 'minecraftlink.shots', project.hasProperty('shots') ? project.property('shots') : 'run/shots'
+			}
+			mods {
+				"${rootProject.mod_id}" {
+					source sourceSets.main
+				}
 			}
 		}
 	}
 }
 
 repositories {
-	minecraft.mavenizer(it)
-	maven fg.forgeMaven
-	maven fg.minecraftLibsMaven
 	mavenCentral()
-	maven {
-		name = 'Fabric'
-		url = 'https://maven.fabricmc.net/'
-	}
 }
 
-jarJar.register()
+jarJar.enable()
 
 dependencies {
-	implementation minecraft.dependency("net.minecraftforge:forge:${rootProject.minecraft_version}-${rootProject.forge_version}")
+	minecraft "net.minecraftforge:forge:${rootProject.minecraft_version}-${rootProject.forge_version}"
 
-	// The passthrough link protocol (pure Java), built from ../link-java and bundled into the jar (jarJar).
-	implementation "dev.patodois:link-java:${rootProject.link_java_version}"
+	// The passthrough link protocol (pure Java), built from ../link-java and bundled into the jar (jarJar). In the dev run Forge's
+	// module layers only see libraries on the minecraftLibrary configuration (it also puts them on the compile classpath).
+	minecraftLibrary "dev.patodois:link-java:${rootProject.link_java_version}"
 	// A plain version here becomes the range [0.1.0,) in the jar's metadata.
-	jarJar "dev.patodois:link-java:${rootProject.link_java_version}"
+	jarJar("dev.patodois:link-java:[${rootProject.link_java_version},)") {
+		jarJar.pin(it, rootProject.link_java_version)
+	}
 }
 
-// The jar that gets released is the one with link-java inside (jarJar task); name it like the other loaders' jars.
+// The jar that gets released is the one with link-java inside (jarJar task), reobfuscated to SRG names; name it like the other loaders' jars.
 tasks.named('jar') {
 	archiveClassifier = 'slim'
+	finalizedBy 'reobfJar'
 }
 tasks.named('jarJar') {
-	archiveClassifier = null
+	archiveClassifier = ''
+	finalizedBy 'reobfJarJar'
 }
-
-// Forge finds the mixin config of a mod jar through this manifest attribute (the config itself is in common/src/main/resources).
-tasks.withType(Jar).configureEach {
-	manifest {
-		attributes 'MixinConfigs': 'minecraft_link.mixins.json'
-	}
+reobf {
+	jarJar {}
 }

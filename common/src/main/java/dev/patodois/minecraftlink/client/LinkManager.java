@@ -5,8 +5,10 @@ import dev.patodois.rewritelink.Control.Role;
 import dev.patodois.rewritelink.Wire.WireException;
 import java.io.IOException;
 import java.nio.file.Path;
+import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
+import org.joml.Matrix4f;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,21 +58,7 @@ public final class LinkManager {
         if (role == Role.HOST && settings.showFrames) frames.start(session);
         guestPublisher.reset();
         LOG.info("link started: {}", session.describe());
-        String warning = loopbackWarning();
-        if (warning != null) LOG.warn(warning);
-        return "link " + session.describe() + (warning == null ? "" : " [!] " + warning);
-    }
-
-    /**
-     * link-java binds and connects to {@code InetAddress.getLoopbackAddress()}, and the protocol needs 127.0.0.1. A JVM started with
-     * {@code -Djava.net.preferIPv6Addresses=system} (what some loaders' launch profiles pass) makes that {@code ::1}, so the other
-     * program, which uses 127.0.0.1, never finds us. Returns a warning in that case, null otherwise.
-     */
-    static String loopbackWarning() {
-        byte[] a = java.net.InetAddress.getLoopbackAddress().getAddress();
-        if (a.length == 4) return null;
-        return "this JVM's loopback address is " + java.net.InetAddress.getLoopbackAddress().getHostAddress() + ", not 127.0.0.1, so a peer on 127.0.0.1 cannot connect;"
-                + " add -Djava.net.preferIPv6Addresses=false to the game's JVM arguments";
+        return "link " + session.describe();
     }
 
     /** Stops the session without blocking the game thread: the bye and the drain happen on a helper thread. */
@@ -114,7 +102,8 @@ public final class LinkManager {
         if (s == null) return "not running (config role: " + settings.role + ", port " + settings.port + ")";
         String f = s.role == Role.HOST ? "; frames drawn " + frames.framesShown + ", reprojected " + frames.framesReprojected
                 + (frames.note.isEmpty() ? "" : " (" + frames.note + ")") + ", host depth convention " + CameraSampler.hostDepthKind
-                + (CameraSampler.lastRewritten ? ", camera depth_range rewritten to " + CameraSampler.lastDepthRange : ", camera depth_range " + CameraSampler.lastDepthRange) : "";
+                + (CameraSampler.lastRewritten ? ", camera depth_range rewritten to " + CameraSampler.lastDepthRange : ", camera depth_range " + CameraSampler.lastDepthRange)
+                + (frames.glInfo.isEmpty() ? "" : "; " + frames.glInfo) : "";
         return s.describe() + f;
     }
 
@@ -154,25 +143,18 @@ public final class LinkManager {
         }
     }
 
-    /** Called on the render thread at the start of every frame's extraction, before entities are extracted. */
-    public void beforeExtract(Minecraft mc) {
+    /** Called on the render thread at the start of every frame's level render, before entities are drawn. */
+    public void beforeEntities(Minecraft mc) {
         Session s = session;
         if (s == null || s.role != Role.HOST || mc.level == null) return;
         remoteEntities.update(mc, s);
-        frames.upload(mc, s);
     }
 
-    /** Called on the render thread once per drawn frame, with the camera Minecraft is about to render with. */
-    public void onLevelStart(Minecraft mc, net.minecraft.client.renderer.state.level.CameraRenderState camera) {
+    /** Called on the render thread once per drawn frame, after the world has been drawn into the main render target. */
+    public void onLevelEnd(Minecraft mc, Camera camera, Matrix4f projection) {
         Session s = session;
         if (s == null || s.role != Role.HOST || !s.isConnected()) return;
-        CameraSampler.sample(mc, s, camera);
-    }
-
-    /** Render thread, end of the level's main pass. */
-    public void onLevelEnd(Minecraft mc) {
-        Session s = session;
-        if (s == null || s.role != Role.HOST || !s.isConnected()) return;
+        CameraSampler.sample(mc, s, camera, projection);
         frames.draw(mc, s);
     }
 }

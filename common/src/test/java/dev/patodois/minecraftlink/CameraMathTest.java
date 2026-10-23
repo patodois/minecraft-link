@@ -4,8 +4,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
 import org.joml.Matrix4f;
-import org.joml.Quaternionf;
 import org.junit.jupiter.api.Test;
 
 class CameraMathTest {
@@ -17,10 +18,33 @@ class CameraMathTest {
         return a;
     }
 
-    /** Minecraft's Camera.setRotation + getViewRotationMatrix, for a yaw and pitch in degrees. */
+    /** What GameRenderer.renderLevel does to the pose stack it hands to the level renderer (Minecraft 1.20.1), for a yaw and pitch in degrees. */
     private static float[] mcViewRotation(double yaw, double pitch) {
-        Quaternionf rotation = new Quaternionf().rotationYXZ((float) (Math.PI - Math.toRadians(yaw)), (float) -Math.toRadians(pitch), 0);
-        return arr(new Matrix4f().rotation(rotation.conjugate(new Quaternionf())));
+        PoseStack stack = new PoseStack();
+        stack.mulPose(Axis.XP.rotationDegrees((float) pitch));
+        stack.mulPose(Axis.YP.rotationDegrees((float) yaw + 180.0F));
+        return arr(stack.last().pose());
+    }
+
+    @Test
+    void viewRotationFromAnglesIsWhatTheGameRendererBuilds() {
+        for (double yaw : new double[] {0, 33, 90, 180, -90, -170, 359.5}) {
+            for (double pitch : new double[] {0, 12.5, -45, 89, -89}) {
+                float[] expected = mcViewRotation(yaw, pitch);
+                float[] got = CameraMath.viewRotation(yaw, pitch);
+                for (int i = 0; i < 16; i++) assertEquals(expected[i], got[i], 1e-5, "yaw " + yaw + " pitch " + pitch + " m[" + i + "]");
+            }
+        }
+        // the camera's own quaternion (Camera.setRotation: rotationYXZ(-yaw, pitch, 0)) looks down +Z; the view is that turned around and inverted
+        org.joml.Quaternionf q = new org.joml.Quaternionf().rotationYXZ((float) Math.toRadians(-40), (float) Math.toRadians(25), 0);
+        float[] fromQuaternion = arr(new Matrix4f().rotationY((float) Math.PI).rotate(q.conjugate(new org.joml.Quaternionf())));
+        float[] fromAngles = CameraMath.viewRotation(40, 25);
+        for (int i = 0; i < 16; i++) assertEquals(fromQuaternion[i], fromAngles[i], 1e-5, "quaternion m[" + i + "]");
+    }
+
+    /** The perspective Minecraft 1.20.1 builds (GameRenderer.getProjectionMatrix): JOML, near before far, clip depth -1..1. */
+    private static Matrix4f mcPerspective(double fovDegrees, float aspect, float far) {
+        return new Matrix4f().perspective((float) Math.toRadians(fovDegrees), aspect, 0.05F, far);
     }
 
     @Test
@@ -86,7 +110,47 @@ class CameraMathTest {
     }
 
     @Test
-    void classifiesMinecraftsReversedProjectionOnBothBackends() {
+    void minecraft1201ProjectionIsPlainOpenGl() {
+        float[] p = arr(mcPerspective(70, 16f / 9f, 512f));
+        assertEquals(CameraMath.DEPTH_OPENGL, CameraMath.classify(p, 0.05, 512));
+        double[] nf = CameraMath.glNearFar(p);
+        assertEquals(0.05, nf[0], 1e-5);
+        assertEquals(512, nf[1], 1.0); // float matrix: far is only known to about 0.1 %
+        // not a plain OpenGL perspective: no planes
+        assertTrue(Double.isNaN(CameraMath.glNearFar(arr(new Matrix4f().perspective(1.2f, 1.5f, FAR, NEAR, true)))[0]));
+    }
+
+    @Test
+    void splitsTheDrawnProjectionIntoPerspectiveAndBob() {
+        // bobHurt and bobView: a rotation about z and x, a small translation (they are applied after the projection, like this)
+        PoseStack stack = new PoseStack();
+        stack.mulPoseMatrix(mcPerspective(75, 1.6f, 640f));
+        stack.translate(0.031f, -0.047f, 0f);
+        stack.mulPose(Axis.ZP.rotationDegrees(1.7f));
+        stack.mulPose(Axis.XP.rotationDegrees(-2.3f));
+        float[] drawn = arr(stack.last().pose());
+        float[][] pb = CameraMath.splitProjectionBob(drawn);
+        assertTrue(pb != null);
+        float[] clean = arr(mcPerspective(75, 1.6f, 640f));
+        for (int i = 0; i < 16; i++) assertEquals(clean[i], pb[0][i], 1e-4, "projection m[" + i + "]");
+        float[] back = CameraMath.mul(pb[0], pb[1]);
+        for (int i = 0; i < 16; i++) assertEquals(drawn[i], back[i], 1e-4, "product m[" + i + "]");
+        // and the split feeds applyBob: clean * (bob * view) == drawn * view
+        float[] view = CameraMath.view(new double[] {3, 4, 5}, mcViewRotation(33, -12), Mapping.IDENTITY);
+        float[] lhs = CameraMath.mul(pb[0], CameraMath.applyBob(view, pb[0], drawn));
+        float[] rhs = CameraMath.mul(drawn, view);
+        for (int i = 0; i < 16; i++) assertEquals(rhs[i], lhs[i], 1e-3, "view m[" + i + "]");
+        // without any bobbing the split is the identity bob
+        float[][] plain = CameraMath.splitProjectionBob(clean);
+        for (int i = 0; i < 16; i++) assertEquals(i % 5 == 0 ? 1 : 0, plain[1][i], 1e-5, "plain bob m[" + i + "]");
+        // not a perspective at all
+        assertEquals(null, CameraMath.splitProjectionBob(CameraMath.identity()));
+        assertEquals(null, CameraMath.splitProjectionBob(null));
+    }
+
+    @Test
+    void classifiesTheDepthConventionsOfOtherRenderers() {
+        // not 1.20.1 (it is plain OpenGL), but the mod measures what it is given: Minecraft 26.x reverses depth.
         float[] reversedZeroToOne = arr(new Matrix4f().perspective((float) Math.toRadians(70), 16f / 9f, FAR, NEAR, true));
         assertEquals(CameraMath.DEPTH_REVERSED, CameraMath.classify(reversedZeroToOne, NEAR, FAR));
         // OpenGL 4.1 (macOS) has no clip control: the same swapped call with zZeroToOne = false.

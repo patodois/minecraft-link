@@ -1,26 +1,26 @@
 modLoader = "javafml"
-loaderVersion = "[66,)"
+loaderVersion = "[47,)"
 license = "MIT OR Apache-2.0"
-# Client only: nothing has to be installed on a server.
-clientSideOnly = true
 
 [[mods]]
 modId = "${mod_id}"
 version = "${version}"
 displayName = "${mod_name}"
 authors = "patodois"
+# Client only: nothing has to be installed on a server, and a server without the mod must not turn the client away.
+displayTest = "IGNORE_ALL_VERSION"
 description = '''Speaks the rewrite-bridge passthrough link protocol, so Minecraft can be a host or a guest next to another game or rewrite. NOT AN OFFICIAL MINECRAFT PRODUCT. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT.'''
 
 [[dependencies.${mod_id}]]
 modId = "forge"
 mandatory = true
-versionRange = "[66,)"
+versionRange = "[47,)"
 ordering = "NONE"
 side = "CLIENT"
 
 [[dependencies.${mod_id}]]
 modId = "minecraft"
 mandatory = true
-versionRange = "[${minecraft_version},26.4)"
+versionRange = "${minecraft_version_range}"
 ordering = "NONE"
 side = "CLIENT"

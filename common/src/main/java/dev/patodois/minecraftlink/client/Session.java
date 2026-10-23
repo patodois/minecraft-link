@@ -22,8 +22,8 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * One running link (host or guest).
  *
- * <p>Threads: the game thread (which is also the render thread in Minecraft 26.3: one thread
- * extracts and draws) never calls into {@link Link}; it drops its samples into the
+ * <p>Threads: the game thread (which is also the render thread in Minecraft 1.20.1: one thread
+ * ticks, builds and draws) never calls into {@link Link}; it drops its samples into the
  * {@code AtomicReference}s below ({@link #offerCamera}, {@link #offerCollision}, {@link #offerPose})
  * and reads {@link #remotes} and the counters. The link thread ({@link LinkRunner}, one
  * daemon thread, 2 ms period) polls the link, sends whatever was offered, and puts what arrives into
@@ -77,11 +77,12 @@ final class Session {
     volatile Role focus = Role.HOST;
     volatile boolean closed;
     volatile int lastCameraSeq;
-    /** Wall-clock ms of the last Frame datagram; while frames flow the placeholder block is hidden. */
+    /** Wall-clock ms of the last Frame datagram; while frames are drawn the placeholder block is hidden. */
     volatile long lastFrameMs;
 
+    /** Whether the guest's own frames are on screen: they are arriving and {@code show_frames} lets the host draw them. */
     boolean framesFresh() {
-        return System.currentTimeMillis() - lastFrameMs < 1000;
+        return settings.showFrames && System.currentTimeMillis() - lastFrameMs < 1000;
     }
 
     final AtomicLong camerasSent = new AtomicLong();
@@ -105,7 +106,7 @@ final class Session {
     }
 
     static Session open(Role role, LinkSettings settings, String localName) throws IOException {
-        LinkConfig cfg = new LinkConfig("Minecraft Java " + net.minecraft.SharedConstants.getCurrentVersion().name());
+        LinkConfig cfg = new LinkConfig("Minecraft Java " + net.minecraft.SharedConstants.getCurrentVersion().getName());
         cfg.controlPort = settings.port;
         cfg.udpPort = settings.udpPort;
         cfg.heartbeatMs = settings.heartbeatMs;

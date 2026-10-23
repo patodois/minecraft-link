@@ -1,11 +1,12 @@
 # Host role against the Rust fake_guest:
 #   fake_guest --port 47833 --frames --in-front
-# The cube appears 4 m ahead of the player (looking north from x=0.0, z=7.5), standing on the collision ground.
+# Minecraft 1.20.1's Superflat has its ground at y=-60 (feet). The cube appears 4 m ahead of the player (looking north from x=0.0, z=7.5),
+# standing on the collision ground.
 # A stone wall that starts at x=0 and stands between the two must hide the right half of the cube.
 create_world
 wait_world
 cmd /gamemode creative
-cmd /tp @s 0.0 4 7.5 180 0
+cmd /tp @s 0.0 -60 7.5 180 0
 wait 40
 look 180 0
 wait 5
@@ -15,7 +16,7 @@ hud off
 look 180 0
 wait 5
 shot 1-open-field
-cmd /fill 0 4 5 2 5 5 minecraft:stone
+cmd /fill 0 -60 5 2 -59 5 minecraft:stone
 wait 40
 look 180 0
 wait 5
@@ -23,12 +24,23 @@ shot 2-wall-hides-right-half
 hud on
 link status
 hud off
-cmd /fill 0 4 5 2 5 5 minecraft:air
+cmd /fill 0 -60 5 2 -59 5 minecraft:air
 wait 40
 look 180 0
 wait 5
 shot 3-wall-removed
+# a wall BEHIND the cube must not hide any of it (the cube is 4 m ahead, this wall 6 m)
+cmd /fill -3 -60 1 3 -59 1 minecraft:stone
+wait 40
+look 180 0
+wait 5
+shot 4-wall-behind-cube
+cmd /fill -3 -60 1 3 -59 1 minecraft:air
+wait 20
+# the HUD is drawn after the guest's frame: its state must be intact
 hud on
+wait 10
+shot 5-hud-on
 link stop
 wait 40
 quit

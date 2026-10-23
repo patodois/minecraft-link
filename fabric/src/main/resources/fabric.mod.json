@@ -10,16 +10,10 @@
 	"entrypoints": {
 		"client": ["dev.patodois.minecraftlink.fabric.MinecraftLinkFabric"]
 	},
-	"mixins": [
-		{
-			"config": "minecraft_link.mixins.json",
-			"environment": "client"
-		}
-	],
 	"depends": {
 		"fabricloader": ">=${loader_min_version}",
-		"minecraft": "~${minecraft_version}",
-		"java": ">=25",
+		"minecraft": "${minecraft_version}",
+		"java": ">=17",
 		"fabric-api": "*"
 	}
 }

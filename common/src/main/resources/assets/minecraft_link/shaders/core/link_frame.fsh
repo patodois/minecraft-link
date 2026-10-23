@@ -1,29 +1,26 @@
-#version 330
-#extension GL_ARB_separate_shader_objects : require
+#version 150
 
 // Draws a guest's frame (colour and linear depth in metres, CONTRACT.md 9.7) into the main target,
 // keeping only the pixels that are nearer than what Minecraft drew there.
 
-uniform sampler2D HostDepth;
+uniform sampler2D HostDepth;   // Minecraft's depth texture (window depth, 0..1)
 uniform sampler2D GuestColor;
 uniform sampler2D GuestDepth;
 
-layout(std140) uniform LinkFrame {
-    // near and far of Minecraft's projection in blocks, the depth convention of its depth buffer
-    // (see CameraMath.DEPTH_*; -1 = reversed with a -1..1 clip range), link metres per block
-    vec4 depthParams;
-    // x: 1 when the guest frame has a depth plane, 0 to paste it as an overlay
-    vec4 flags;
-};
+// x, y: near and far of Minecraft's projection in blocks; z: the depth convention of its depth buffer
+// (see CameraMath.DEPTH_*: 0 = OpenGL -1..1, 1 = zero to one, 2 / -1 = reversed); w: link metres per block
+uniform vec4 DepthParams;
+// x: 1 when the guest frame has a depth plane, 0 to paste it as an overlay
+uniform vec4 Flags;
 
-layout(location = 0) in vec2 texCoord;
-layout(location = 0) out vec4 fragColor;
+in vec2 texCoord;
+out vec4 fragColor;
 
 // The hardware depth value d (as stored in the depth buffer, 0..1) to linear metres in front of the camera.
 float hostLinearDepth(float d) {
-    float n = depthParams.x;
-    float f = depthParams.y;
-    int kind = int(depthParams.z);
+    float n = DepthParams.x;
+    float f = DepthParams.y;
+    int kind = int(DepthParams.z);
     if (kind == 2 || kind == -1) {
         // reversed: near -> 1, far -> 0 (the same formula whether the clip range was 0..1 or -1..1,
         // because d is the window depth in both)
@@ -31,6 +28,7 @@ float hostLinearDepth(float d) {
     } else if (kind == 1) {
         return f * n / (f - d * (f - n));
     } else {
+        // OpenGL: ndc z in -1..1, window depth d = (ndc + 1) / 2. Minecraft 1.20.1 uses this one.
         float ndc = d * 2.0 - 1.0;
         return 2.0 * f * n / ((f + n) - ndc * (f - n));
     }
@@ -43,12 +41,12 @@ void main() {
     if (c.a <= 0.0) {
         discard;
     }
-    if (flags.x > 0.5) {
+    if (Flags.x > 0.5) {
         float tg = texture(GuestDepth, g).r;
         if (!(tg > 0.0) || isinf(tg)) {
             discard;
         }
-        float th = hostLinearDepth(texture(HostDepth, texCoord).r) * depthParams.w;
+        float th = hostLinearDepth(texture(HostDepth, texCoord).r) * DepthParams.w;
         if (!(tg < th)) {
             discard; // the host's surface is nearer, or equally near: the host wins
         }

@@ -4,22 +4,21 @@ package dev.patodois.minecraftlink;
  * Turns Minecraft's camera matrices into the numbers of a link {@code Camera} (CONTRACT.md 9.3).
  * Matrices are column-major {@code float[16]}, element {@code m[c*4 + r]}, as in JOML and glTF.
  *
- * <p>What Minecraft 26.3 actually does (read from its sources, nothing assumed):
+ * <p>What Minecraft 1.20.1 actually does (read from {@code GameRenderer.renderLevel}, nothing assumed):
  * <ul>
- *   <li>It renders camera-relative: the view matrix is the rotation matrix {@code R} (the conjugate of
- *       the camera quaternion) and the camera position {@code p} is subtracted from world positions
- *       separately. The full world-to-view matrix is therefore {@code R * translate(-p)}.</li>
- *   <li>The projection comes from JOML's {@code setPerspective(fovY, aspect, near', far', zZeroToOne)}
- *       called with near and far <b>swapped</b>, so depth is reversed (the near plane maps to the
- *       largest depth value). Whether the clip range is 0..1 or -1..1 depends on the GPU backend
- *       (Vulkan and OpenGL with ARB_clip_control use 0..1; OpenGL 4.1 as on macOS uses -1..1).</li>
- *   <li>Near is 0.05 and far is {@code max(4 * render distance * 16, cloud range * 16)} blocks.</li>
+ *   <li>It renders camera-relative: the pose stack handed to the level renderer holds only the rotation
+ *       {@code R} ({@code Rx(pitch) * Ry(yaw + 180)}) and the camera position {@code p} is subtracted from world
+ *       positions separately. The full world-to-view matrix is therefore {@code R * translate(-p)}.</li>
+ *   <li>The projection is JOML's {@code perspective(fovY, aspect, 0.05, far)}: standard OpenGL, clip depth
+ *       -1..1, not reversed. Far is {@code 4 * render distance * 16} blocks.</li>
  *   <li>The level is drawn with {@code projection * bob}, where {@code bob} is the view-bobbing and
- *       damage-tilt transform. {@link #applyBob} folds it into the view matrix.</li>
+ *       damage-tilt transform. {@link #splitProjectionBob} takes the two apart again and {@link #applyBob}
+ *       folds the bob into the view matrix.</li>
  * </ul>
  * The contract's {@code depth_range} knows OpenGL (near -1, far +1), zero-to-one and reversed
- * zero-to-one. {@link #classify} measures which one a matrix is; the one combination the contract
- * has no code for (reversed, -1..1) is rewritten to plain OpenGL with the same frustum, see
+ * zero-to-one. {@link #classify} measures which one a matrix is, so a renderer that changes the
+ * convention (another mod, another version) is still described correctly; the one combination the
+ * contract has no code for (reversed, -1..1) is rewritten to plain OpenGL with the same frustum, see
  * {@link #normalize}.
  */
 public final class CameraMath {
@@ -98,6 +97,26 @@ public final class CameraMath {
     // ------------------------------------------------------------------ view
 
     /**
+     * The rotation Minecraft 1.20.1 gives the pose stack it hands to the level renderer, from the camera's yaw and pitch in degrees:
+     * {@code Rx(pitch) * Ry(yaw + 180)} (GameRenderer.renderLevel). It maps world directions to view directions; the view looks down -Z.
+     */
+    public static float[] viewRotation(double yawDegrees, double pitchDegrees) {
+        double p = Math.toRadians(pitchDegrees), y = Math.toRadians(yawDegrees + 180.0);
+        double cp = Math.cos(p), sp = Math.sin(p), cy = Math.cos(y), sy = Math.sin(y);
+        float[] rx = identity();
+        rx[5] = (float) cp;
+        rx[6] = (float) sp;
+        rx[9] = (float) -sp;
+        rx[10] = (float) cp;
+        float[] ry = identity();
+        ry[0] = (float) cy;
+        ry[2] = (float) -sy;
+        ry[8] = (float) sy;
+        ry[10] = (float) cy;
+        return mul(rx, ry);
+    }
+
+    /**
      * World-to-view in link space: {@code viewRotation * translate(-position) * mappingInverse}.
      * {@code position} is Minecraft's camera position and {@code viewRotation} Minecraft's rotation-only
      * view matrix; the {@link Mapping} says how Minecraft world coordinates turn into link
@@ -134,6 +153,55 @@ public final class CameraMath {
     }
 
     // ------------------------------------------------------------------ projection
+
+    /**
+     * Minecraft draws with {@code drawn = P * B}: the perspective {@code P} times the bobbing and damage-tilt transform
+     * {@code B} (a rotation and a small translation). It hands the product to its renderers and keeps no copy of {@code P},
+     * but the two can be told apart again: the last row of a perspective matrix is {@code (0, 0, -1, 0)}, so the last row of
+     * {@code drawn} is the negated third row of {@code B}; the first two rows are {@code B}'s first two rows scaled by the
+     * perspective's x and y scales; the third row is {@code c * (third row of B) + d * (0, 0, 0, 1)}.
+     *
+     * @return {@code {P, B}}, or {@code null} when {@code drawn} does not have that shape (the caller then uses it as it is)
+     */
+    public static float[][] splitProjectionBob(float[] drawn) {
+        if (drawn == null || drawn.length != 16) return null;
+        double[][] r = new double[4][4];
+        for (int row = 0; row < 4; row++) for (int c = 0; c < 4; c++) r[row][c] = drawn[c * 4 + row];
+        double a = Math.sqrt(r[0][0] * r[0][0] + r[0][1] * r[0][1] + r[0][2] * r[0][2]);
+        double b = Math.sqrt(r[1][0] * r[1][0] + r[1][1] * r[1][1] + r[1][2] * r[1][2]);
+        if (!(a > 1e-9) || !(b > 1e-9)) return null;
+        double[] b2 = {-r[3][0], -r[3][1], -r[3][2], -r[3][3]};
+        double n2 = Math.sqrt(b2[0] * b2[0] + b2[1] * b2[1] + b2[2] * b2[2]);
+        if (Math.abs(n2 - 1) > 1e-3) return null;
+        double c = r[2][0] * b2[0] + r[2][1] * b2[1] + r[2][2] * b2[2];
+        double d = r[2][3] - c * b2[3];
+        float[] p = new float[16];
+        p[0] = (float) a;
+        p[5] = (float) b;
+        p[10] = (float) c;
+        p[14] = (float) d;
+        p[11] = -1;
+        float[] bob = identity();
+        double[][] rows = {{r[0][0] / a, r[0][1] / a, r[0][2] / a, r[0][3] / a}, {r[1][0] / b, r[1][1] / b, r[1][2] / b, r[1][3] / b}, b2};
+        for (int row = 0; row < 3; row++) for (int col = 0; col < 4; col++) bob[col * 4 + row] = (float) rows[row][col];
+        // the product has to give the input back; this also rejects a matrix that is not of this form at all
+        float[] back = mul(p, bob);
+        for (int i = 0; i < 16; i++) {
+            if (!(Math.abs(back[i] - drawn[i]) <= 2e-3 * (1 + Math.abs(drawn[i])))) return null;
+        }
+        return new float[][] {p, bob};
+    }
+
+    /** Near and far plane distances of a standard OpenGL perspective matrix (clip depth -1..1), or NaN where it is not one. */
+    public static double[] glNearFar(float[] proj) {
+        double c = proj[10], d = proj[14];
+        if (!(Math.abs(proj[11] + 1) < 1e-4) || Math.abs(c - 1) < 1e-9 || Math.abs(c + 1) < 1e-9) return new double[] {Double.NaN, Double.NaN};
+        double near = d / (c - 1), far = d / (c + 1);
+        if (!(near > 0) || !(far > near)) return new double[] {Double.NaN, Double.NaN};
+        // a reversed or zero-to-one matrix also gives positive numbers: only accept one that really maps near to -1 and far to +1
+        if (classify(proj, near, far) != DEPTH_OPENGL) return new double[] {Double.NaN, Double.NaN};
+        return new double[] {near, far};
+    }
 
     /** The clip depth (z / w) a point at {@code distance} metres in front of the camera gets. */
     public static double clipDepthAt(float[] proj, double distance) {

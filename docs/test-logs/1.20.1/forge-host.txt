@@ -1,0 +1,53 @@
+# forge-host: Minecraft 1.20.1 on macOS (Apple M5), peak RSS of the game JVM: 2157 MB
+# game log (mod and autotest lines):
+[main/INFO] [cp.mo.mo.Launcher/MODLAUNCHER]: ModLauncher running: args [--launchTarget, forgeclientuserdev, --version, MOD_DEV, --assetIndex, 5, --assetsDir, ~/.gradle/caches/forge_gradle/assets, --gameDir, ., --fml.forgeVersion, 47.4.28, --fml.mcVersion, 1.20.1, --fml.forgeGroup, net.minecraftforge, --fml.mcpVersion, 20230612.114412]
+[main/INFO] [cp.mo.mo.Launcher/MODLAUNCHER]: ModLauncher 10.0.9+10.0.9+main.dcd20f30 starting: java version 17.0.20.1 by Azul Systems, Inc.; OS Mac OS X arch aarch64 version 26.6.2
+[main/INFO] [mixin/]: SpongePowered MIXIN Subsystem Version=0.8.5 Source=union:~/.gradle/caches/modules-2/files-2.1/org.spongepowered/mixin/0.8.5/9d1c0c3a304ae6697ecd477218fa61b850bf57fc/mixin-0.8.5.jar%23123!/ Service=ModLauncher Env=CLIENT
+[modloading-worker-0/INFO] [minecraft-link/]: autotest: 46 lines from ~/minecraft-link-1.20.1/autotest/host_wall.txt, screenshots to <scratch>/mclink-1201/forge-host/shots
+[modloading-worker-0/INFO] [minecraft-link/]: Minecraft Link loaded on Forge; commands: /link host, /link guest, /link stop, /link status, /link focus <host|guest>
+[Render thread/INFO] [minecraft-link/]: autotest: /gamemode creative
+[Render thread/INFO] [minecraft-link/]: autotest: /tp @s 0.0 -60 7.5 180 0
+[Render thread/INFO] [minecraft-link/]: link started: host on 127.0.0.1:47833, waiting for a guest; sent 0 cameras, 0 collision snapshots (0 triangles); received 0 poses, 0 frames; 0 guest entities; datagrams in/out 0/0, malformed 0, stale 0, foreign 0
+[Render thread/INFO] [minecraft-link/]: autotest: link host 47833 -> link host on 127.0.0.1:47833, waiting for a guest; sent 0 cameras, 0 collision snapshots (0 triangles); received 0 poses, 0 frames; 0 guest entities; datagrams in/out 0/0, malformed 0, stale 0, foreign 0
+[minecraft-link-frames/INFO] [minecraft-link/]: pixel file /var/folders/3j/xwr0chjs1wxghh4f209rllxw0000gn/T/rewrite-bridge-44253-guest-602b140b-0.frames mapped: 320x240, 3 slots, depth plane: true
+[Render thread/INFO] [minecraft-link/]: showing guest entity 1 (Fake Guest demo/cube) as a block display
+[Render thread/INFO] [minecraft-link/]: connected to Fake Guest (guest, protocol v1)
+[Render thread/INFO] [minecraft-link/]: guest spawned entity 1 (Fake Guest demo/cube)
+[Render thread/INFO] [minecraft-link/]: peer announced a pixel file: /var/folders/3j/xwr0chjs1wxghh4f209rllxw0000gn/T/rewrite-bridge-44253-guest-602b140b-0.frames 320x240
+[Render thread/INFO] [minecraft-link/]: frame pass ready: GL_VERSION 4.1 Metal - 90.5, GLSL 4.10, renderer Apple M5, vendor Apple
+[Render thread/INFO] [minecraft-link/]: the guest asks for the input focus (/link focus guest to give it)
+[Render thread/INFO] [minecraft-link/]: autotest: screenshot <scratch>/mclink-1201/forge-host/shots/1-open-field.png (1708x960)
+[Render thread/INFO] [minecraft-link/]: autotest: /fill 0 -60 5 2 -59 5 minecraft:stone
+[Render thread/INFO] [minecraft-link/]: autotest: screenshot <scratch>/mclink-1201/forge-host/shots/2-wall-hides-right-half.png (1708x960)
+[Render thread/INFO] [minecraft-link/]: autotest: link status -> host on 127.0.0.1:47833, connected to Fake Guest (session 602b140b), input focus with the host; sent 1033 cameras, 3 collision snapshots (4628 triangles); received 1033 poses, 1028 frames; 1 guest entities; datagrams in/out 2098/1133, malformed 0, stale 0, foreign 0; frames drawn 1026, reprojected 1708 (pixel file 320x240 with depth), host depth convention 0, camera depth_range 0; GL_VERSION 4.1 Metal - 90.5, GLSL 4.10, renderer Apple M5, vendor Apple
+[Render thread/INFO] [minecraft-link/]: autotest: /fill 0 -60 5 2 -59 5 minecraft:air
+[Render thread/INFO] [minecraft-link/]: autotest: screenshot <scratch>/mclink-1201/forge-host/shots/3-wall-removed.png (1708x960)
+[Render thread/INFO] [minecraft-link/]: autotest: /fill -3 -60 1 3 -59 1 minecraft:stone
+[Render thread/INFO] [minecraft-link/]: autotest: screenshot <scratch>/mclink-1201/forge-host/shots/4-wall-behind-cube.png (1708x960)
+[Render thread/INFO] [minecraft-link/]: autotest: /fill -3 -60 1 3 -59 1 minecraft:air
+[Render thread/INFO] [minecraft-link/]: autotest: screenshot <scratch>/mclink-1201/forge-host/shots/5-hud-on.png (1708x960)
+[Render thread/INFO] [minecraft-link/]: autotest: link stop -> stopping the link (bye, then half-close)
+[minecraft-link-close/INFO] [minecraft-link/]: link closed (1834 cameras, 6 collision snapshots, 0 poses sent)
+[Render thread/INFO] [minecraft-link/]: autotest: done, closing the game
+[Incubating] Problems report is available at: file://~/minecraft-link-1.20.1/build/reports/problems/problems-report.html
+
+# peer log (rewrite-bridge example, first and last lines):
+[guest   0.00s] connecting to 127.0.0.1:47833
+[guest  23.68s] connected: host "Minecraft Java 1.20.1", protocol v1, session 0x602b140b
+[guest  23.69s] pixel file /var/folders/3j/xwr0chjs1wxghh4f209rllxw0000gn/T/rewrite-bridge-44253-guest-602b140b-0.frames (320x240, depth: true, latency 40 ms)
+[guest  23.70s] cube placed 4 m ahead of the camera at [-0.0, 1.62, 3.5]
+[guest  23.78s] collision query 1: 4596 triangles within 16 m of [0.0, 0.0, 7.5]
+[guest  23.78s] cube stands on the host's ground at y 0.00
+[guest  24.00s] got 35 cameras; sent 35 poses, 31 frames (render 0.1 ms each); focus with the host
+[guest  25.00s] got 114 cameras; sent 114 poses, 113 frames (render 0.1 ms each); focus with the host
+[guest  25.68s] asking the host for input focus
+[guest  26.00s] got 114 cameras; sent 114 poses, 114 frames (render 0.1 ms each); focus with the host
+[guest  27.00s] got 113 cameras; sent 113 poses, 113 frames (render 0.1 ms each); focus with the host
+[guest  28.00s] got 111 cameras; sent 111 poses, 112 frames (render 0.1 ms each); focus with the host
+...
+[guest  37.00s] got 114 cameras; sent 114 poses, 114 frames (render 0.1 ms each); focus with the host
+[guest  38.00s] got 110 cameras; sent 110 poses, 109 frames (render 0.1 ms each); focus with the host
+[guest  38.53s] collision query 6: 4596 triangles within 16 m of [0.0, 0.0, 7.5]
+[guest  39.00s] got 110 cameras; sent 110 poses, 111 frames (render 0.1 ms each); focus with the host
+[guest  40.00s] got 108 cameras; sent 108 poses, 108 frames (render 0.1 ms each); focus with the host
+[guest  40.13s] LOST the host: peer said bye: closing

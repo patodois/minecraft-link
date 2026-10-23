@@ -2,7 +2,7 @@
 create_world
 wait_world
 cmd /gamemode creative
-cmd /tp @s 0 4 0 0 0
+cmd /tp @s 0 -60 0 0 0
 wait 40
 pos
 link guest 47831

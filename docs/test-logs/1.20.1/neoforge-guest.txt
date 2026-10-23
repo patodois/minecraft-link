@@ -1,0 +1,54 @@
+# neoforge-guest: Minecraft 1.20.1 on macOS (Apple M5), peak RSS of the game JVM: 1844 MB
+# game log (mod and autotest lines):
+[main/INFO] [cp.mo.mo.Launcher/MODLAUNCHER]: ModLauncher running: args [--launchTarget, forgeclientuserdev, --version, MOD_DEV, --assetIndex, 5, --assetsDir, ~/.gradle/caches/neoformruntime/assets, --gameDir, ., --fml.forgeVersion, 47.1.106, --fml.fmlVersion, 47.2.2, --fml.mcVersion, 1.20.1, --fml.mcpVersion, 20230612.114412]
+[main/INFO] [cp.mo.mo.Launcher/MODLAUNCHER]: ModLauncher 10.0.10+10.0.10+main.22f00f84 starting: java version 17.0.20.1 by Azul Systems, Inc.; OS Mac OS X arch aarch64 version 26.6.2
+[main/INFO] [mixin/]: SpongePowered MIXIN Subsystem Version=0.8.5 Source=union:~/.gradle/caches/modules-2/files-2.1/org.spongepowered/mixin/0.8.5/9d1c0c3a304ae6697ecd477218fa61b850bf57fc/mixin-0.8.5.jar%23181!/ Service=ModLauncher Env=CLIENT
+[Render thread/WARN] [minecraft/VanillaPackResourcesBuilder]: Assets URL 'union:~/minecraft-link-1.20.1/neoforge/build/moddev/artifacts/forge-1.20.1-47.1.106.jar%23184!/assets/.mcassetsroot' uses unexpected schema
+[Render thread/WARN] [minecraft/VanillaPackResourcesBuilder]: Assets URL 'union:~/minecraft-link-1.20.1/neoforge/build/moddev/artifacts/forge-1.20.1-47.1.106.jar%23184!/data/.mcassetsroot' uses unexpected schema
+[modloading-worker-0/INFO] [minecraft-link/]: autotest: 34 lines from ~/minecraft-link-1.20.1/autotest/guest.txt, screenshots to <scratch>/mclink-1201/neoforge-guest/shots
+[modloading-worker-0/INFO] [minecraft-link/]: Minecraft Link loaded on NeoForge; commands: /link host, /link guest, /link stop, /link status, /link focus <host|guest>
+[modloading-worker-0/INFO] [ne.mi.co.MinecraftForge/FORGE]: NeoForge v47.1.106 Initialized
+[Render thread/INFO] [minecraft-link/]: autotest: /gamemode creative
+[Render thread/INFO] [minecraft-link/]: autotest: /tp @s 0 -60 0 0 0
+[Render thread/INFO] [minecraft-link/]: autotest: player at 0.5 -60.0 0.5 yaw 0.0 pitch 0.0; first free block above the ground at y=-60; block below: Grass Block
+[Render thread/INFO] [minecraft-link/]: link started: guest on 127.0.0.1:47831, looking for a host; sent 0 poses; received 0 cameras; datagrams in/out 0/0, malformed 0, stale 0, foreign 0
+[Render thread/INFO] [minecraft-link/]: autotest: link guest 47831 -> link guest on 127.0.0.1:47831, looking for a host; sent 0 poses; received 0 cameras; datagrams in/out 0/0, malformed 0, stale 0, foreign 0
+[Render thread/INFO] [minecraft-link/]: connected to Fake Host (host, protocol v1)
+[Render thread/INFO] [minecraft-link/]: autotest: forward key down while the host holds the input focus (movement must be ignored)
+[Render thread/INFO] [minecraft-link/]: autotest: player at 0.5 -60.0 0.5 yaw 0.0 pitch 0.0; first free block above the ground at y=-60; block below: Grass Block
+[Render thread/INFO] [minecraft-link/]: autotest: asking for focus
+[Render thread/INFO] [minecraft-link/]: autotest: link focus guest -> asked the host for the input focus
+[Render thread/INFO] [minecraft-link/]: input focus is now with the guest
+[Render thread/INFO] [minecraft-link/]: input focus is now with the host
+[Render thread/INFO] [minecraft-link/]: autotest: player at 0.5 -60.0 9.13060733762779 yaw 0.0 pitch 0.0; first free block above the ground at y=-60; block below: Grass Block
+[Render thread/INFO] [minecraft-link/]: autotest: player at 0.5 -60.0 9.13060733762779 yaw 0.0 pitch 0.0; first free block above the ground at y=-60; block below: Grass Block
+[Render thread/INFO] [minecraft-link/]: autotest: handing focus back, holding forward again
+[Render thread/INFO] [minecraft-link/]: autotest: link focus host -> asked the host for the input focus
+[Render thread/INFO] [minecraft-link/]: input focus is now with the host
+[Render thread/INFO] [minecraft-link/]: input focus is now with the host
+[Render thread/INFO] [minecraft-link/]: autotest: player at 0.5 -60.0 9.13060733762779 yaw 0.0 pitch 0.0; first free block above the ground at y=-60; block below: Grass Block
+[Render thread/INFO] [minecraft-link/]: autotest: link status -> guest on 127.0.0.1:47831, connected to Fake Host (session a5555b76), input focus with the host; sent 316 poses; received 925 cameras; datagrams in/out 1051/380, malformed 0, stale 0, foreign 0
+[Render thread/INFO] [minecraft-link/]: autotest: link stop -> stopping the link (bye, then half-close)
+[minecraft-link-close/INFO] [minecraft-link/]: link closed (0 cameras, 0 collision snapshots, 337 poses sent)
+[Render thread/INFO] [minecraft-link/]: autotest: done, closing the game
+
+# peer log (rewrite-bridge example, first and last lines):
+[host   0.00s] listening on 127.0.0.1:47831
+[host  23.30s] connected: guest "Minecraft Java 1.20.1", protocol v1, session 0xa5555b76, guest udp 127.0.0.1:64502
+[host  23.32s] guest spawned entity 1 = Minecraft asset "minecraft:player"
+[host  24.01s] sent 42 cameras; got 14 poses in 14 datagrams, 0 frames; presented 0 (age mean 0.0 ms, max 0.0 ms); last pose Some([0.5, 0.0, 0.5]); pose latency 8151 us; malformed 0 stale 0 foreign 0
+[host  25.02s] sent 59 cameras; got 20 poses in 20 datagrams, 0 frames; presented 0 (age mean 0.0 ms, max 0.0 ms); last pose Some([0.5, 0.0, 0.5]); pose latency 12001 us; malformed 0 stale 0 foreign 0
+[host  26.00s] sent 58 cameras; got 20 poses in 20 datagrams, 0 frames; presented 0 (age mean 0.0 ms, max 0.0 ms); last pose Some([0.5, 0.0, 0.5]); pose latency 14875 us; malformed 0 stale 0 foreign 0
+[host  27.02s] sent 59 cameras; got 20 poses in 20 datagrams, 0 frames; presented 0 (age mean 0.0 ms, max 0.0 ms); last pose Some([0.5, 0.0, 0.5]); pose latency 15014 us; malformed 0 stale 0 foreign 0
+[host  28.01s] sent 57 cameras; got 20 poses in 20 datagrams, 0 frames; presented 0 (age mean 0.0 ms, max 0.0 ms); last pose Some([0.5, 0.0, 0.5]); pose latency 2564 us; malformed 0 stale 0 foreign 0
+[host  28.89s] guest asks for input focus; granting it to the guest
+[host  29.01s] sent 58 cameras; got 20 poses in 20 datagrams, 0 frames; presented 0 (age mean 0.0 ms, max 0.0 ms); last pose Some([0.5, 0.0, 0.6]); pose latency 5089 us; malformed 0 stale 0 foreign 0
+[host  30.02s] sent 59 cameras; got 20 poses in 20 datagrams, 0 frames; presented 0 (age mean 0.0 ms, max 0.0 ms); last pose Some([0.5, 0.0, 4.77]); pose latency 16087 us; malformed 0 stale 0 foreign 0
+[host  30.90s] taking input focus back
+...
+[host  37.01s] sent 58 cameras; got 20 poses in 20 datagrams, 0 frames; presented 0 (age mean 0.0 ms, max 0.0 ms); last pose Some([0.5, 0.0, 9.13]); pose latency 2230 us; malformed 0 stale 0 foreign 0
+[host  38.02s] sent 59 cameras; got 20 poses in 20 datagrams, 0 frames; presented 0 (age mean 0.0 ms, max 0.0 ms); last pose Some([0.5, 0.0, 9.13]); pose latency 12745 us; malformed 0 stale 0 foreign 0
+[host  39.01s] sent 58 cameras; got 20 poses in 20 datagrams, 0 frames; presented 0 (age mean 0.0 ms, max 0.0 ms); last pose Some([0.5, 0.0, 9.13]); pose latency 5682 us; malformed 0 stale 0 foreign 0
+[host  40.01s] sent 59 cameras; got 20 poses in 20 datagrams, 0 frames; presented 0 (age mean 0.0 ms, max 0.0 ms); last pose Some([0.5, 0.0, 9.13]); pose latency 13558 us; malformed 0 stale 0 foreign 0
+[host  40.18s] guest despawned entity 1
+[host  40.20s] LOST the guest: peer said bye: closing

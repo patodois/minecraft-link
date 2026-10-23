@@ -1,5 +1,6 @@
+// NeoForge 1.20.1 (the 47.1.x fork of Forge): ModDevGradle's legacy plugin, which develops against Mojang names and reobfuscates the jar to SRG.
 plugins {
-	id 'net.neoforged.moddev'
+	id 'net.neoforged.moddev.legacyforge'
 }
 apply from: rootProject.file('gradle/loader.gradle')
 
@@ -7,8 +8,11 @@ repositories {
 	mavenCentral()
 }
 
-neoForge {
-	version = rootProject.neoforge_version
+legacyForge {
+	enable {
+		neoForgeVersion = "${rootProject.minecraft_version}-${rootProject.neoforge_version}"
+		disableRecompilation = true
+	}
 
 	runs {
 		client {
@@ -16,9 +20,6 @@ neoForge {
 			gameDirectory = project.file('run')
 			// The Mac has 16 GB shared with other builds: keep the game small.
 			jvmArguments.add '-Xmx2G'
-			// ModDevGradle starts the game with -Djava.net.preferIPv6Addresses=system, which makes InetAddress.getLoopbackAddress()
-			// (what link-java binds to) ::1 instead of the 127.0.0.1 the protocol requires. Undo that for the dev client.
-			systemProperty 'java.net.preferIPv6Addresses', 'false'
 			// Scripted runs (see AutoTest): ./gradlew :neoforge:runClient -Pautotest=/path/script.txt -Pshots=/path/dir
 			if (project.hasProperty('autotest')) {
 				systemProperty 'minecraftlink.autotest', project.property('autotest')
@@ -35,10 +36,11 @@ neoForge {
 }
 
 dependencies {
-	// Vanilla's Mixin annotations are on NeoForge's classpath already; MixinExtras (@Local) too.
-
-	// The passthrough link protocol (pure Java), built from ../link-java and bundled into the jar (jarJar).
+	// The passthrough link protocol (pure Java), built from ../link-java and bundled into the jar (jarJar). In the dev run it has to be
+	// on the extra runtime classpath too: ModDevGradle only puts the game, the loader and the mods' own classes on the legacy
+	// class path, and Forge's module layers do not see libraries that are not on it.
 	implementation "dev.patodois:link-java:${rootProject.link_java_version}"
+	additionalRuntimeClasspath "dev.patodois:link-java:${rootProject.link_java_version}"
 	jarJar("dev.patodois:link-java") {
 		version {
 			strictly "[${rootProject.link_java_version},)"

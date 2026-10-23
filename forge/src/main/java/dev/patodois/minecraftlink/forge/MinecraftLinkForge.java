@@ -1,33 +1,31 @@
 package dev.patodois.minecraftlink.forge;
 
-import com.mojang.blaze3d.framegraph.FramePass;
 import dev.patodois.minecraftlink.client.LinkCommands;
 import dev.patodois.minecraftlink.client.LinkMod;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.LevelTargetBundle;
-import net.minecraft.client.renderer.state.level.LevelRenderState;
 import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.resources.Identifier;
-import net.minecraftforge.client.FramePassManager;
-import net.minecraftforge.client.event.AddFramePassEvent;
+import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RegisterClientCommandsEvent;
-import net.minecraftforge.event.GameShuttingDownEvent;
+import net.minecraftforge.client.event.RenderLevelStageEvent;
+import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.loading.FMLEnvironment;
 import net.minecraftforge.fml.loading.FMLPaths;
 
-/** Forge entry point: wires the loader's events into the common code. Client only. */
+/**
+ * Forge 1.20.1 entry point: wires the loader's events into the common code. Client only. (NeoForge 1.20.1 keeps the same package
+ * names; see the neoforge module for its copy of this class.)
+ */
 @Mod(LinkMod.MOD_ID)
 public final class MinecraftLinkForge {
-    public MinecraftLinkForge(FMLJavaModLoadingContext context) {
-        if (!FMLEnvironment.dist.isClient()) return; // the jar may sit in a server's mods folder; it does nothing there
+    public MinecraftLinkForge() {
+        if (FMLEnvironment.dist != Dist.CLIENT) return; // the jar may sit in a server's mods folder; it does nothing there
         LinkMod.init(FMLPaths.CONFIGDIR.get(), "Forge");
-        RegisterClientCommandsEvent.BUS.addListener(MinecraftLinkForge::onRegisterCommands);
-        TickEvent.ClientTickEvent.Post.BUS.addListener(MinecraftLinkForge::onClientTick);
-        AddFramePassEvent.BUS.addListener(MinecraftLinkForge::onAddFramePass);
-        GameShuttingDownEvent.BUS.addListener(MinecraftLinkForge::onShutdown);
+        MinecraftForge.EVENT_BUS.addListener(MinecraftLinkForge::onRegisterCommands);
+        MinecraftForge.EVENT_BUS.addListener(MinecraftLinkForge::onClientTick);
+        MinecraftForge.EVENT_BUS.addListener(MinecraftLinkForge::onRenderLevelStage);
+        MinecraftForge.EVENT_BUS.addListener(MinecraftLinkForge::onShutdown);
     }
 
     private static void onRegisterCommands(RegisterClientCommandsEvent event) {
@@ -35,33 +33,24 @@ public final class MinecraftLinkForge {
                 (source, message) -> source.sendSuccess(() -> message, false)));
     }
 
-    private static void onClientTick(TickEvent.ClientTickEvent.Post event) {
-        LinkMod.onClientTick(Minecraft.getInstance());
+    private static void onClientTick(TickEvent.ClientTickEvent event) {
+        if (event.phase == TickEvent.Phase.END) LinkMod.onClientTick(Minecraft.getInstance());
     }
 
     /**
-     * Forge has no level-stage event; its render hook is a frame-graph pass. The pass is added once, runs every frame, and
-     * binds to the main render target, which the frame graph orders after the main pass (Forge inserts its passes after the
-     * vanilla ones). While the graph is built ({@code extracts}) the camera of the frame is sampled, the equivalent of
-     * Fabric's START_MAIN; when it executes, with no render pass open, the guest's frame is drawn where it is nearer than
-     * the world, the equivalent of END_MAIN.
+     * AFTER_SKY comes before the entities are drawn (the guest placeholders are placed for this frame); AFTER_LEVEL is the end of
+     * the level render, after the world and before the hand and the GUI: the main target holds the finished world and its depth,
+     * and the event has the camera, the pose stack's rotation and the projection with view bobbing.
      */
-    private static void onAddFramePass(AddFramePassEvent event) {
-        event.addPass(Identifier.fromNamespaceAndPath(LinkMod.MOD_ID, "guest_frame"), new FramePassManager.PassDefinition() {
-            @Override
-            public void extracts(LevelTargetBundle bundle, FramePass pass, LevelRenderState state) {
-                bundle.main = pass.readsAndWrites(bundle.main);
-                LinkMod.onLevelStart(Minecraft.getInstance(), state.cameraRenderState);
-            }
-
-            @Override
-            public void executes(LevelRenderState state) {
-                LinkMod.onLevelEnd(Minecraft.getInstance());
-            }
-        });
+    private static void onRenderLevelStage(RenderLevelStageEvent event) {
+        if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_SKY) {
+            LinkMod.onLevelStart(Minecraft.getInstance());
+        } else if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_LEVEL) {
+            LinkMod.onLevelEnd(Minecraft.getInstance(), event.getCamera(), event.getProjectionMatrix());
+        }
     }
 
-    private static void onShutdown(GameShuttingDownEvent event) {
+    private static void onShutdown(net.minecraftforge.event.GameShuttingDownEvent event) {
         LinkMod.onClientStopping();
     }
 }

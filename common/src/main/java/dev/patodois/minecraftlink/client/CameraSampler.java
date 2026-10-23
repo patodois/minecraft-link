@@ -4,7 +4,8 @@ import dev.patodois.minecraftlink.CameraMath;
 import dev.patodois.rewritelink.Wire;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.state.level.CameraRenderState;
+import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 
 /**
@@ -14,24 +15,42 @@ import org.joml.Matrix4f;
 final class CameraSampler {
     private CameraSampler() {}
 
-    static void sample(Minecraft mc, Session s, CameraRenderState cs) {
-        if (!cs.initialized) return;
-        float[] viewRot = new float[16];
-        cs.viewRotationMatrix.get(viewRot);
-        float[] clean = new float[16];
-        cs.projectionMatrix.get(clean);
-        float[] drawn = CameraCapture.drawnProjection;
-        CameraCapture.drawnProjection = null;
+    /**
+     * @param camera          the camera the level was drawn with: its position (Minecraft renders relative to it) and its rotation
+     * @param drawnProjection what Minecraft drew the level with: the perspective times the bobbing and damage tilt
+     */
+    static void sample(Minecraft mc, Session s, Camera camera, Matrix4f drawnProjection) {
+        if (!camera.isInitialized()) return;
+        // The view rotation is what GameRenderer.renderLevel puts on the pose stack it hands to the level renderer, Rx(pitch) * Ry(yaw + 180),
+        // built here from the camera's angles: Forge's AFTER_LEVEL event does not carry that pose stack, and the camera's own quaternion
+        // looks down +Z instead of -Z.
+        float[] viewRot = CameraMath.viewRotation(camera.getYRot(), camera.getXRot());
+        float[] drawn = new float[16];
+        drawnProjection.get(drawn);
+        float[][] split = CameraMath.splitProjectionBob(drawn);
+        float[] clean = split != null ? split[0] : drawn;
 
         double k = s.mapping.scale;
-        double near = Camera.PROJECTION_Z_NEAR; // fixed by Camera.update: setupPerspective(0.05F, depthFar, ...)
-        double far = cs.depthFar;                // max(4 * render distance * 16, cloud range * 16), blocks
+        // The planes are the constants Minecraft builds its projection from: GameRenderer.PROJECTION_Z_NEAR and getDepthFar()
+        // = 4 * render distance * 16 blocks. If the matrix does not have them (another mod changed the projection) they are
+        // read back from the matrix instead, which is only good to about a tenth of a percent in float.
+        double near = GameRenderer.PROJECTION_Z_NEAR;
+        double far = mc.gameRenderer.getDepthFar();
+        if (CameraMath.classify(clean, near, far) != CameraMath.DEPTH_OPENGL) {
+            double[] nf = CameraMath.glNearFar(clean);
+            if (!Double.isNaN(nf[0])) {
+                near = nf[0];
+                far = nf[1];
+            }
+        }
 
-        float[] view = CameraMath.view(new double[] {cs.pos.x, cs.pos.y, cs.pos.z}, viewRot, s.mapping);
+        Vec3 pos = camera.getPosition();
+        float[] view = CameraMath.view(new double[] {pos.x, pos.y, pos.z}, viewRot, s.mapping);
         view = CameraMath.applyBob(view, clean, drawn);
         CameraMath.Projection p = CameraMath.normalize(clean, near * k, far * k);
 
-        int w = mc.gameRenderer.mainRenderTarget().width, h = mc.gameRenderer.mainRenderTarget().height;
+        var target = mc.getMainRenderTarget();
+        int w = target.width, h = target.height;
         Wire.DepthRange dr = switch (p.depthRange()) {
             case CameraMath.DEPTH_OPENGL -> Wire.DepthRange.NEG_ONE_TO_ONE;
             case CameraMath.DEPTH_ZERO_TO_ONE -> Wire.DepthRange.ZERO_TO_ONE;
@@ -53,7 +72,7 @@ final class CameraSampler {
     /** For the status line and the frame shader. */
     static volatile int lastDepthRange = -1;
     static volatile double hostNear = 0.05, hostFar = 512;
-    static volatile int hostDepthKind = CameraMath.DEPTH_REVERSED;
+    static volatile int hostDepthKind = CameraMath.DEPTH_OPENGL;
     static volatile boolean lastRewritten;
     static volatile double lastNear = 0.05, lastFar = 512;
 }

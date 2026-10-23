@@ -4,26 +4,30 @@ import dev.patodois.minecraftlink.client.LinkCommands;
 import dev.patodois.minecraftlink.client.LinkMod;
 import net.minecraft.client.Minecraft;
 import net.minecraft.commands.CommandSourceStack;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.ModContainer;
-import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.loading.FMLPaths;
-import net.neoforged.neoforge.client.event.ClientTickEvent;
-import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
-import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.GameShuttingDownEvent;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.RegisterClientCommandsEvent;
+import net.minecraftforge.client.event.RenderLevelStageEvent;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.loading.FMLEnvironment;
+import net.minecraftforge.fml.loading.FMLPaths;
 
-/** NeoForge entry point: wires the loader's events into the common code. Client only. */
-@Mod(value = LinkMod.MOD_ID, dist = Dist.CLIENT)
+/**
+ * NeoForge 1.20.1 entry point: wires the loader's events into the common code. Client only.
+ *
+ * <p>NeoForge 1.20.1 (47.1.x) is a fork of Forge 47 and still uses the {@code net.minecraftforge} packages, so this is the same code as the
+ * Forge module's entry point; it is built against NeoForge so that the jar is tested on NeoForge's own loader.
+ */
+@Mod(LinkMod.MOD_ID)
 public final class MinecraftLinkNeoForge {
-    public MinecraftLinkNeoForge(IEventBus modBus, ModContainer container) {
+    public MinecraftLinkNeoForge() {
+        if (FMLEnvironment.dist != Dist.CLIENT) return; // the jar may sit in a server's mods folder; it does nothing there
         LinkMod.init(FMLPaths.CONFIGDIR.get(), "NeoForge");
-        NeoForge.EVENT_BUS.addListener(MinecraftLinkNeoForge::onRegisterCommands);
-        NeoForge.EVENT_BUS.addListener(MinecraftLinkNeoForge::onClientTick);
-        NeoForge.EVENT_BUS.addListener(MinecraftLinkNeoForge::onAfterLevel);
-        NeoForge.EVENT_BUS.addListener(MinecraftLinkNeoForge::onShutdown);
+        MinecraftForge.EVENT_BUS.addListener(MinecraftLinkNeoForge::onRegisterCommands);
+        MinecraftForge.EVENT_BUS.addListener(MinecraftLinkNeoForge::onClientTick);
+        MinecraftForge.EVENT_BUS.addListener(MinecraftLinkNeoForge::onRenderLevelStage);
+        MinecraftForge.EVENT_BUS.addListener(MinecraftLinkNeoForge::onShutdown);
     }
 
     private static void onRegisterCommands(RegisterClientCommandsEvent event) {
@@ -31,23 +35,24 @@ public final class MinecraftLinkNeoForge {
                 (source, message) -> source.sendSuccess(() -> message, false)));
     }
 
-    private static void onClientTick(ClientTickEvent.Post event) {
-        LinkMod.onClientTick(Minecraft.getInstance());
+    private static void onClientTick(TickEvent.ClientTickEvent event) {
+        if (event.phase == TickEvent.Phase.END) LinkMod.onClientTick(Minecraft.getInstance());
     }
 
     /**
-     * Fired once per frame, inside GameRenderer#renderLevel right after the level has been drawn into the
-     * main render target and before the hand and the GUI, with no render pass open. That is the spot Fabric's
-     * END_MAIN gives the common code: the camera of this frame is sampled first, then the guest's frame is
-     * drawn where it is nearer than the world.
+     * AFTER_SKY comes before the entities are drawn (the guest placeholders are placed for this frame); AFTER_LEVEL is the end of
+     * the level render, after the world and before the hand and the GUI: the main target holds the finished world and its depth,
+     * and the event has the camera, the pose stack's rotation and the projection with view bobbing.
      */
-    private static void onAfterLevel(RenderLevelStageEvent.AfterLevel event) {
-        Minecraft mc = Minecraft.getInstance();
-        LinkMod.onLevelStart(mc, event.getLevelRenderState().cameraRenderState);
-        LinkMod.onLevelEnd(mc);
+    private static void onRenderLevelStage(RenderLevelStageEvent event) {
+        if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_SKY) {
+            LinkMod.onLevelStart(Minecraft.getInstance());
+        } else if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_LEVEL) {
+            LinkMod.onLevelEnd(Minecraft.getInstance(), event.getCamera(), event.getProjectionMatrix());
+        }
     }
 
-    private static void onShutdown(GameShuttingDownEvent event) {
+    private static void onShutdown(net.minecraftforge.event.GameShuttingDownEvent event) {
         LinkMod.onClientStopping();
     }
 }

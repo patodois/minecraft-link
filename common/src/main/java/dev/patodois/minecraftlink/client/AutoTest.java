@@ -7,10 +7,18 @@ import java.nio.file.Path;
 import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
+import net.minecraft.client.gui.screens.GenericDirtMessageScreen;
 import net.minecraft.client.gui.screens.TitleScreen;
-import net.minecraft.client.gui.screens.worldselection.CreateWorldScreen;
-import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.Difficulty;
+import net.minecraft.world.level.GameRules;
+import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.LevelSettings;
+import net.minecraft.world.level.WorldDataConfiguration;
+import net.minecraft.world.level.levelgen.WorldOptions;
+import net.minecraft.world.level.levelgen.presets.WorldPresets;
 
 /**
  * Development aid, inactive unless the JVM property {@code minecraftlink.autotest} names a script.
@@ -20,7 +28,7 @@ import net.minecraft.client.player.LocalPlayer;
  * {@code minecraftlink.shots}. Script lines, one per line ({@code #} starts a comment):
  *
  * <pre>
- *   create_world            open the built-in flat test world (creative, commands on) and create it
+ *   create_world            create a new creative Superflat world with commands on and open it (the game's own world-creation call, no screen)
  *   wait_world              wait until the player is in the world and the first chunks are there
  *   wait N                  wait N client ticks
  *   cmd /gamemode creative  send a chat command as the player (leading slash optional)
@@ -64,18 +72,7 @@ final class AutoTest {
         if (lines == null) return;
         if (++ticks % 200 == 0) {
             LinkManager.LOG.info("autotest: tick {} line {}/{} screen={} level={}", ticks, index, lines.size(),
-                    mc.gui.screen() == null ? "none" : mc.gui.screen().getClass().getSimpleName(), mc.level != null);
-        }
-        if (mc.gui.screen() instanceof net.minecraft.client.gui.screens.ConfirmScreen cs && worldRequested && mc.level == null) {
-            // the world-creation warning about commands/experiments: confirm it (the first button)
-            for (var c : cs.children()) {
-                if (c instanceof net.minecraft.client.gui.components.Button b) {
-                    LinkManager.LOG.info("autotest: confirming '{}' with '{}'", cs.getTitle().getString(), b.getMessage().getString());
-                    b.onPress(new KeyEvent(257, 28, 0));
-                    break;
-                }
-            }
-            return;
+                    mc.screen == null ? "none" : mc.screen.getClass().getSimpleName(), mc.level != null);
         }
         if (waitTicks > 0) {
             waitTicks--;
@@ -101,28 +98,20 @@ final class AutoTest {
         switch (w[0]) {
             case "create_world" -> {
                 if (!worldRequested) {
-                    if (!(mc.gui.screen() instanceof TitleScreen)) return false;
+                    // wait for the title screen and for the resource reload's loading overlay to be gone: a world that opens while the block
+                    // models are still being baked gets block updates it cannot draw yet (a vanilla race, logged as "Error executing task")
+                    if (!(mc.screen instanceof TitleScreen) || mc.getOverlay() != null) return false;
                     worldRequested = true;
-                    CreateWorldScreen.testWorld(mc, () -> {});
-                    return false;
+                    // The same call the world-creation screen makes, with the Superflat preset; creative, commands on, peaceful.
+                    LevelSettings settings = new LevelSettings("linktest-" + System.currentTimeMillis() / 1000, GameType.CREATIVE, false, Difficulty.PEACEFUL, true,
+                            new GameRules(), WorldDataConfiguration.DEFAULT);
+                    mc.createWorldOpenFlows().createFreshLevel(settings.levelName(), settings, WorldOptions.defaultWithRandomSeed(),
+                            access -> access.registryOrThrow(Registries.WORLD_PRESET).getHolderOrThrow(WorldPresets.FLAT).value().createWorldDimensions());
                 }
-                if (mc.gui.screen() instanceof CreateWorldScreen s) {
-                    s.getUiState().setName("linktest-" + System.currentTimeMillis() / 1000);
-                    s.getUiState().setAllowCommands(true);
-                    for (var c : s.children()) {
-                        if (c instanceof net.minecraft.client.gui.components.Button b
-                                && b.getMessage().getContents() instanceof net.minecraft.network.chat.contents.TranslatableContents t
-                                && t.getKey().equals("selectWorld.create")) {
-                            b.onPress(new KeyEvent(257, 28, 0));
-                            return true;
-                        }
-                    }
-                    return false;
-                }
-                return false;
+                return true;
             }
             case "wait_world" -> {
-                if (mc.level == null || p == null || mc.gui.screen() != null) return false;
+                if (mc.level == null || p == null || mc.screen != null) return false;
                 if (stage++ < 100) return false; // five seconds of ticks for the chunks around the spawn
                 stage = 0;
                 return true;
@@ -134,7 +123,7 @@ final class AutoTest {
             case "cmd" -> {
                 if (p == null) return false;
                 String c = arg.startsWith("/") ? arg.substring(1) : arg;
-                p.connection.sendCommand(c);
+                p.connection.sendUnsignedCommand(c);
                 LinkManager.LOG.info("autotest: /{}", c);
                 return true;
             }
@@ -176,7 +165,7 @@ final class AutoTest {
                 return true;
             }
             case "hud" -> {
-                if (mc.gui.hud.isHidden() != arg.trim().equals("off")) mc.gui.hud.toggle();
+                mc.options.hideGui = arg.trim().equals("off");
                 return true;
             }
             case "shot" -> {
@@ -186,15 +175,14 @@ final class AutoTest {
                 } catch (IOException e) {
                     LinkManager.LOG.warn("autotest: {}", e.toString());
                 }
-                Screenshot.takeScreenshot(mc.gameRenderer.mainRenderTarget(), image -> {
-                    try (image) {
-                        image.writeToFile(out);
-                        LinkManager.LOG.info("autotest: screenshot {} ({}x{})", out, image.getWidth(), image.getHeight());
-                    } catch (IOException e) {
-                        LinkManager.LOG.warn("autotest: screenshot failed", e);
-                    }
-                });
-                waitTicks = 10; // the readback finishes within a frame or two
+                // the game's own screenshot: a glReadPixels of the main render target
+                try (var image = Screenshot.takeScreenshot(mc.getMainRenderTarget())) {
+                    image.writeToFile(out);
+                    LinkManager.LOG.info("autotest: screenshot {} ({}x{})", out, image.getWidth(), image.getHeight());
+                } catch (IOException | RuntimeException e) {
+                    LinkManager.LOG.warn("autotest: screenshot failed", e);
+                }
+                waitTicks = 5;
                 return true;
             }
             case "pos" -> {
@@ -210,7 +198,9 @@ final class AutoTest {
             }
             case "leave" -> {
                 LinkManager.LOG.info("autotest: leaving the world (no /link stop)");
-                mc.disconnectWithSavingScreen();
+                mc.level.disconnect();
+                mc.clearLevel(new GenericDirtMessageScreen(Component.translatable("menu.savingLevel")));
+                mc.setScreen(new TitleScreen());
                 return true;
             }
             case "quit" -> {

@@ -1,7 +1,6 @@
 {
   "pack": {
     "description": "Rewrite Link for Minecraft resources",
-    "max_format": 121,
-    "min_format": 121
+    "pack_format": 15
   }
 }

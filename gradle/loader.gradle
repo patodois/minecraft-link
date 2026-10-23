@@ -1,4 +1,4 @@
-// Shared by the loader modules (fabric, neoforge, forge): they compile the common sources and resources into
+// Shared by the loader modules (fabric, forge, neoforge): they compile the common sources and resources into
 // their own jar, name it minecraft-link-<loader>-<version>.jar, and carry the licences.
 
 apply plugin: 'java'
@@ -18,16 +18,16 @@ sourceSets.main {
 }
 
 tasks.withType(JavaCompile).configureEach {
-	options.release = 25
+	options.release = 17
 	options.encoding = 'UTF-8'
 }
 
 java {
 	withSourcesJar()
-	// The only JDK this build uses is the one Gradle runs on (JDK 25); tools that ask for a toolchain get that one.
-	toolchain.languageVersion = JavaLanguageVersion.of(25)
-	sourceCompatibility = JavaVersion.VERSION_25
-	targetCompatibility = JavaVersion.VERSION_25
+	// Minecraft 1.20.1 runs on Java 17; the mod is compiled for it.
+	toolchain.languageVersion = JavaLanguageVersion.of(17)
+	sourceCompatibility = JavaVersion.VERSION_17
+	targetCompatibility = JavaVersion.VERSION_17
 }
 
 // The version (and a few names) are written into each loader's metadata file.
@@ -37,11 +37,13 @@ tasks.named('processResources') {
 		mod_id      : rootProject.mod_id,
 		mod_name    : rootProject.mod_name,
 		minecraft_version: rootProject.minecraft_version,
+		minecraft_version_range: rootProject.minecraft_version_range,
 		loader_min_version: rootProject.loader_min_version,
-		neoforge_version: rootProject.hasProperty('neoforge_version') ? rootProject.neoforge_version : '',
+		forge_version: rootProject.forge_version,
+		neoforge_version: rootProject.neoforge_version,
 	]
 	inputs.properties props
-	filesMatching(['fabric.mod.json', 'META-INF/neoforge.mods.toml', 'META-INF/mods.toml']) {
+	filesMatching(['fabric.mod.json', 'META-INF/mods.toml']) {
 		expand props
 	}
 }
@@ -53,16 +55,21 @@ tasks.named('jar') {
 }
 
 // Test clients must be silent: before every runClient write the master volume 0 into the run directory's options.txt
-// (created if missing, other lines kept). The accessibility onboarding screen of a first start is switched off too,
-// so scripted runs are not stuck on it.
+// (created if missing, other lines kept). The accessibility onboarding screen of a first start and the pause menu that
+// appears when the window is not focused are switched off too, so scripted runs are not stuck on them, and the tutorial hints
+// stay away from the screenshots.
 def prepareRunOptions = tasks.register('prepareRunOptions') {
 	def optionsFile = layout.projectDirectory.file('run/options.txt').asFile
 	doLast {
 		optionsFile.parentFile.mkdirs()
-		def lines = optionsFile.exists() ? optionsFile.readLines().findAll { !it.startsWith('soundCategory_master:') && !it.startsWith('onboardAccessibility:') } : []
-		lines.add('soundCategory_master:0.0')
-		lines.add('onboardAccessibility:false')
+		def ours = ['soundCategory_master:0.0', 'onboardAccessibility:false', 'pauseOnLostFocus:false', 'tutorialStep:none']
+		def lines = optionsFile.exists() ? optionsFile.readLines().findAll { line -> !ours.any { line.startsWith(it.split(':')[0] + ':') } } : []
+		lines.addAll(ours)
 		optionsFile.text = lines.join('\n') + '\n'
 	}
 }
-tasks.matching { it.name == 'runClient' }.configureEach { dependsOn prepareRunOptions }
+tasks.matching { it.name == 'runClient' }.configureEach {
+	dependsOn prepareRunOptions
+	// the game runs on Java 17 whatever JDK runs Gradle
+	if (it instanceof JavaExec) it.javaLauncher = javaToolchains.launcherFor(java.toolchain)
+}

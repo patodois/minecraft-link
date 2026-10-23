@@ -1,51 +1,51 @@
-// All loader-independent logic. Compiled against unobfuscated vanilla Minecraft (no loader API), mainly so the unit tests
+// All loader-independent logic. Compiled against vanilla Minecraft 1.20.1 with Mojang names (no loader API), mainly so the unit tests
 // run here; the loader modules compile these same sources into their jars.
 plugins {
 	id 'java-library'
-	id 'net.neoforged.moddev'
+	id 'net.neoforged.moddev.legacyforge'
 }
 
 version = rootProject.mod_version
 group = rootProject.maven_group
 
-neoForge {
-	neoFormVersion = rootProject.neo_form_version
+legacyForge {
+	enable {
+		// Vanilla mode: Minecraft 1.20.1 with the official (Mojang) names, no Forge code. No decompiling: the classes are only renamed.
+		mcpVersion = rootProject.minecraft_version
+		disableRecompilation = true
+	}
 }
 
 repositories {
 	mavenCentral()
-	maven {
-		name = 'Fabric'
-		url = 'https://maven.fabricmc.net/'
-	}
 }
 
 dependencies {
 	// The passthrough link protocol (pure Java), built from ../link-java.
 	implementation "dev.patodois:link-java:${rootProject.link_java_version}"
 
-	// Every loader brings Mixin and MixinExtras at run time; common only needs the annotations.
-	compileOnly 'net.fabricmc:sponge-mixin:0.17.3+mixin.0.8.7'
-	compileOnly 'io.github.llamalad7:mixinextras-common:0.5.3'
-
-	testImplementation 'org.junit.jupiter:junit-jupiter:5.13.4'
-	testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.13.4'
+	testImplementation 'org.junit.jupiter:junit-jupiter:5.10.3'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.3'
 }
 
 tasks.withType(JavaCompile).configureEach {
-	options.release = 25
+	options.release = 17
 	options.encoding = 'UTF-8'
 }
 
 java {
-	sourceCompatibility = JavaVersion.VERSION_25
-	targetCompatibility = JavaVersion.VERSION_25
+	sourceCompatibility = JavaVersion.VERSION_17
+	targetCompatibility = JavaVersion.VERSION_17
+	toolchain.languageVersion = JavaLanguageVersion.of(17)
 }
 
-// ModDevGradle puts vanilla (the game jar and its libraries) on the main compile classpath only; the tests, which bootstrap the
-// real block registries, need it on both of theirs.
+// The tests bootstrap the real block registries, so vanilla has to be on their classpath too, with its resources (language file,
+// version.json) which the plugin keeps in a second jar.
+def vanillaResources = files(layout.buildDirectory.file("moddev/artifacts/vanilla-${rootProject.minecraft_version}-client-extra-aka-minecraft-resources.jar")) {
+	builtBy 'createMinecraftArtifacts'
+}
 sourceSets.test.compileClasspath += sourceSets.main.compileClasspath
-sourceSets.test.runtimeClasspath += sourceSets.main.compileClasspath
+sourceSets.test.runtimeClasspath += sourceSets.main.compileClasspath + vanillaResources
 
 test {
 	useJUnitPlatform()

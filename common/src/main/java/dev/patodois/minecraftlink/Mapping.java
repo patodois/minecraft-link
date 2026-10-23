@@ -19,8 +19,8 @@ import dev.patodois.rewritelink.Quat;
  * The link's entity front is +Z, so an entity with yaw 0 and pitch 0 has the identity rotation, and
  * in general {@code rotation = Ry(-yaw) * Rx(pitch)} (right-handed rotations about +Y and +X). The
  * camera is the same rotation turned half a turn about Y, because a link camera looks down its own
- * -Z; Minecraft's own camera quaternion already does that, so cameras are not built from yaw/pitch
- * here, they are taken from Minecraft's view matrix (see {@link CameraMath}).
+ * -Z, while Minecraft's camera quaternion looks down +Z; cameras are built separately from the
+ * camera's yaw and pitch the way {@code GameRenderer} builds its view (see {@link CameraMath#viewRotation}).
  *
  * <p>Optional settings (all identity by default) for diagnosing a host or guest whose axes turn out
  * different, mirrored or scaled: {@code flipX}, {@code flipZ} (mirror the world; this reverses

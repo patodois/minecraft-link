@@ -74,13 +74,13 @@ class MappingTest {
 
     @Test
     void agreesWithMinecraftsOwnCameraQuaternion() {
-        // Camera.setRotation: rotation.rotationYXZ(PI - yaw, -pitch, 0); the camera looks down its local -Z.
+        // Camera.setRotation (1.20.1): rotation.rotationYXZ(-yaw, pitch, 0); that quaternion is the camera's orientation looking down +Z.
         Random rnd = new Random(3);
         for (int i = 0; i < 200; i++) {
             double yaw = rnd.nextDouble() * 360 - 180, pitch = rnd.nextDouble() * 160 - 80;
-            Quaternionf cam = new Quaternionf().rotationYXZ((float) (Math.PI - Math.toRadians(yaw)), (float) -Math.toRadians(pitch), 0);
-            Vector3f fwd = new Vector3f(0, 0, -1).rotate(cam);
-            assertVec(Mapping.lookDirection(yaw, pitch), new double[] {fwd.x, fwd.y, fwd.z}, 1e-5);
+            Quaternionf cam = new Quaternionf().rotationYXZ((float) -Math.toRadians(yaw), (float) Math.toRadians(pitch), 0);
+            Vector3f fwd = new Vector3f(0, 0, 1).rotate(cam);
+            assertVec(Mapping.lookDirection(yaw, pitch), new double[] {fwd.x, fwd.y, fwd.z}, 1e-4); // the quaternion is built in float
         }
     }
 

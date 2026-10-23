@@ -21,19 +21,22 @@ jobs:
         with:
           repository: patodois/link-java
           path: link-java
+      # Gradle itself runs on JDK 21 (Loom 1.13 needs it; the last version listed becomes JAVA_HOME), the game and the mod are
+      # compiled for Java 17 through Gradle's toolchain, which finds the JDK 17 below (or fetches one through the foojay resolver).
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '25'
+          java-version: |
+            17
+            21
       - uses: gradle/actions/setup-gradle@v4
         with:
           # the wrapper in the repository decides the Gradle version
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
-      # Builds the Fabric (also used on Quilt), NeoForge and Forge jars and runs the 40 unit tests of the common module.
-      # ModDevGradle asks for a Java 21 toolchain for some of its tools; the foojay resolver in settings.gradle fetches it.
+      # Builds the Fabric, NeoForge and Forge jars and runs the unit tests of the common module.
       - name: Build all loaders and run the common tests
         working-directory: minecraft-link
-        run: ./gradlew build --no-daemon
+        run: ./gradlew build --no-daemon -Dorg.gradle.java.installations.fromEnv=JAVA_HOME_17_X64,JAVA_HOME_17_ARM64
       - uses: actions/upload-artifact@v4
         with:
           name: jars-${{ matrix.os }}
