@@ -99,8 +99,9 @@ final class Session {
     /** Wall-clock ms of the last Frame datagram; while frames flow the placeholder block is hidden. */
     volatile long lastFrameMs;
 
+    /** Whether the guest's own frames are on screen: they are arriving and {@code show_frames} lets the host draw them. */
     boolean framesFresh() {
-        return System.currentTimeMillis() - lastFrameMs < 1000;
+        return settings.showFrames && System.currentTimeMillis() - lastFrameMs < 1000;
     }
 
     final AtomicLong camerasSent = new AtomicLong();
