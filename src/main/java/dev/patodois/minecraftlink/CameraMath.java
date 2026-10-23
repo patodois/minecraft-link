@@ -118,6 +118,14 @@ public final class CameraMath {
         return mul(mcView, inv);
     }
 
+    /** Where the camera of a world-to-view matrix is (the point it maps to the origin): {@code -R^T t}. */
+    public static double[] cameraPosition(float[] view) {
+        double t0 = view[12], t1 = view[13], t2 = view[14];
+        double[] p = new double[3];
+        for (int i = 0; i < 3; i++) p[i] = -(view[i * 4] * t0 + view[i * 4 + 1] * t1 + view[i * 4 + 2] * t2);
+        return p;
+    }
+
     /**
      * Folds the bobbing transform into the view. Minecraft draws the level with
      * {@code cleanProjection * bob}; the contract wants a separate view and projection, so with

@@ -140,7 +140,9 @@ All hooks are plain Forge events and client commands: **no coremod, no mixin, no
 
 - The projection and the modelview matrix are **read back from OpenGL** (`GL_PROJECTION_MATRIX`,
   `GL_MODELVIEW_MATRIX`), so they are exactly what the game used for the world pass, including view bobbing, the
-  hurt tilt, the eye height and the field of view of the moment.
+  hurt tilt, the eye height, the 0.05 m the first-person camera is moved along the view direction, and the field of view
+  of the moment. On the test run the camera sent for a player standing at (0.5, 4, 0.5) looking at yaw 25 and pitch 5 was
+  at (0.479, 5.616, 0.545): the eye (0.5, 5.62, 0.5) moved 0.05 m along the view direction.
 - Minecraft 1.12.2 draws the world relative to the render view entity's interpolated position
   (`lastTickPos + (pos - lastTickPos) * partialTicks`), so the modelview matrix is a rotation without translation.
   The link's `view` is `modelview * translate(-thatPosition)` (then the mapping's flip, scale and offset).
@@ -212,7 +214,7 @@ Forge 14.23.5.2847 (what RetroFuturaGradle 2.0.6 uses; the jar runs on any 14.23
 ```sh
 export JAVA_HOME=/opt/homebrew/opt/openjdk@25
 ./gradlew build --no-daemon          # build/libs/minecraft-link-1.12.2-0.1.0.jar (reobfuscated, link-java merged in), runs the tests
-./gradlew test --no-daemon           # 41 unit tests, no game needed
+./gradlew test --no-daemon           # 42 unit tests, no game needed
 ./gradlew runClient --no-daemon      # the real client, deobfuscated dev environment, offline dev account, -Xmx1500m
 ./gradlew runObfClient --no-daemon   # the real client with the reobfuscated release jar, as a player's game runs it
 ```

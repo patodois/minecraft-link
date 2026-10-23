@@ -45,7 +45,8 @@ import net.minecraftforge.fml.common.gameevent.TickEvent;
  *   view N                  camera mode: 0 first person, 1 third person behind, 2 third person in front
  *   pos                     log the player's position
  *   shot NAME               save NAME.png (the game's framebuffer) into minecraftlink.shots
- *   log TEXT                write a line to the log
+ *   log TEXT                write a line to the log (a line starting with EXTSHOT also waits 1.5 s: an outside runner
+ *                           watching the log takes a screenshot of the window)
  *   leave                   leave the world to the title screen
  *   quit                    close the game
  * </pre>
@@ -216,12 +217,15 @@ final class AutoTest {
             }
             case "pos": {
                 if (p == null) return false;
-                LinkManager.LOG.info("autotest: player at {} {} {} yaw {} pitch {}; block below: {}", p.posX, p.posY, p.posZ, p.rotationYaw, p.rotationPitch,
+                double[] cam = CameraSampler.lastCameraPosition;
+                LinkManager.LOG.info("autotest: player feet at {} {} {}; last camera sent at {}; yaw {} pitch {}; block below: {}", p.posX, p.posY, p.posZ,
+                        cam == null ? "none" : String.format("%.3f %.3f %.3f", cam[0], cam[1], cam[2]), p.rotationYaw, p.rotationPitch,
                         mc.world.getBlockState(p.getPosition().down()).getBlock().getLocalizedName());
                 return true;
             }
             case "log":
                 LinkManager.LOG.info("autotest: {}", arg);
+                if (arg.startsWith("EXTSHOT")) waitTicks = 30; // the test runner takes a screenshot of the window now: keep the scene still
                 return true;
             case "leave": {
                 if (mc.world == null) return true;

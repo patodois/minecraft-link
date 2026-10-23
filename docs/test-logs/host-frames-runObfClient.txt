@@ -1,4 +1,4 @@
-# runObfClient: the mod's own log lines
+# runObfClient (the reobfuscated release jar): the mod's own log lines
 [15:43:36] [Client thread/INFO] [minecraft-link]: autotest: 36 lines from .../scripts/host-obf.txt, screenshots to .../1.12.2
 [15:43:36] [Client thread/INFO] [minecraft-link]: Minecraft Link loaded; commands: /link host, /link guest, /link stop, /link status, /link focus <host|guest>
 [15:43:47] [Client thread/INFO] [minecraft-link]: autotest: /gamerule doDaylightCycle false

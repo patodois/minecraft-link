@@ -80,6 +80,7 @@ final class CameraSampler {
                 break;
         }
         Wire.Camera cam = new Wire.Camera(view, p.matrix(), CameraMath.fovY(p.matrix()), (float) (near * k), (float) (far * k), w, h, dr);
+        lastCameraPosition = CameraMath.cameraPosition(view);
         s.offerCamera(cam);
         LinkManager.INSTANCE.frames.offerPresentCamera(cam);
         // The game's own depth buffer convention, for the frame shader: measured on the matrix it really uses.
@@ -91,6 +92,9 @@ final class CameraSampler {
         lastNear = near * k;
         lastFar = far * k;
     }
+
+    /** Where the last camera sent is, in link space (for the scripted tests). */
+    static volatile double[] lastCameraPosition;
 
     /** For the status line and the frame shader. */
     static volatile int lastDepthRange = -1;

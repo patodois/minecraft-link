@@ -1,0 +1,68 @@
+# runClient vs fake_guest --frames --in-front, a stone wall placed in front: peer log
+[guest   0.00s] connecting to 127.0.0.1:47851
+[guest   0.02s] connected: host "Minecraft Java 1.12.2", protocol v1, session 0x1b517e36
+[guest   0.02s] pixel file /var/folders/3j/xwr0chjs1wxghh4f209rllxw0000gn/T/rewrite-bridge-93972-guest-1b517e36-0.frames (320x240, depth: true, latency 40 ms)
+[guest   0.04s] cube placed 4 m ahead of the camera at [0.5, 5.62, 4.55]
+[guest   0.28s] collision query 1: 4596 triangles within 16 m of [0.5, 4.0, 0.5]
+[guest   0.28s] cube stands on the host's ground at y 4.00
+[guest   1.00s] got 59 cameras; sent 59 poses, 56 frames (render 0.2 ms each); focus with the host
+[guest   2.00s] got 60 cameras; sent 60 poses, 60 frames (render 0.2 ms each); focus with the host
+[guest   2.02s] asking the host for input focus
+[guest   3.00s] got 60 cameras; sent 60 poses, 60 frames (render 0.2 ms each); focus with the host
+[guest   4.00s] got 60 cameras; sent 60 poses, 61 frames (render 0.1 ms each); focus with the host
+[guest   5.00s] got 60 cameras; sent 60 poses, 59 frames (render 0.1 ms each); focus with the host
+[guest   5.66s] collision query 2: 4596 triangles within 16 m of [0.5, 4.0, 0.5]
+[guest   6.00s] got 60 cameras; sent 60 poses, 60 frames (render 0.1 ms each); focus with the host
+[guest   7.00s] got 59 cameras; sent 59 poses, 60 frames (render 0.1 ms each); focus with the host
+[guest   7.21s] collision query 3: 4632 triangles within 16 m of [0.5, 4.0, 0.5]
+[guest   8.00s] got 60 cameras; sent 60 poses, 60 frames (render 0.1 ms each); focus with the host
+[guest   9.00s] got 60 cameras; sent 60 poses, 60 frames (render 0.1 ms each); focus with the host
+[guest  10.00s] got 60 cameras; sent 60 poses, 59 frames (render 0.2 ms each); focus with the host
+[guest  11.00s] got 60 cameras; sent 60 poses, 61 frames (render 0.1 ms each); focus with the host
+[guest  12.00s] got 60 cameras; sent 60 poses, 59 frames (render 0.1 ms each); focus with the host
+[guest  12.27s] collision query 4: 4632 triangles within 16 m of [0.5, 4.0, 0.5]
+[guest  13.00s] got 60 cameras; sent 60 poses, 60 frames (render 0.1 ms each); focus with the host
+[guest  14.00s] got 60 cameras; sent 60 poses, 60 frames (render 0.1 ms each); focus with the host
+[guest  15.00s] got 60 cameras; sent 60 poses, 60 frames (render 0.2 ms each); focus with the host
+[guest  16.00s] got 60 cameras; sent 60 poses, 60 frames (render 0.2 ms each); focus with the host
+[guest  17.00s] got 60 cameras; sent 60 poses, 60 frames (render 0.2 ms each); focus with the host
+[guest  17.77s] collision query 5: 4632 triangles within 16 m of [0.5, 4.0, 0.5]
+[guest  18.00s] got 60 cameras; sent 60 poses, 60 frames (render 0.2 ms each); focus with the host
+[guest  18.62s] LOST the host: peer said bye: closing
+
+# the mod's own log lines
+[16:06:05] [Client thread/INFO] [minecraft-link]: autotest: 37 lines from .../scripts/host.txt, screenshots to .../1.12.2
+[16:06:05] [Client thread/INFO] [minecraft-link]: Minecraft Link loaded; commands: /link host, /link guest, /link stop, /link status, /link focus <host|guest>
+[16:06:16] [Client thread/INFO] [minecraft-link]: autotest: /gamerule doDaylightCycle false
+[16:06:16] [Client thread/INFO] [minecraft-link]: autotest: /time set 6000
+[16:06:16] [Client thread/INFO] [minecraft-link]: autotest: /weather clear
+[16:06:16] [Client thread/INFO] [minecraft-link]: autotest: /gamerule sendCommandFeedback false
+[16:06:16] [Client thread/INFO] [minecraft-link]: autotest: /tp @p 0.5 4 0.5
+[16:06:19] [Client thread/INFO] [minecraft-link]: autotest: EXTSHOT 20-host-before-link
+[16:06:21] [Client thread/INFO] [minecraft-link]: autotest: /link host 47851
+[16:06:21] [Client thread/INFO] [minecraft-link]: link started: host on 127.0.0.1:47851, waiting for a guest; sent 0 cameras, 0 collision snapshots (0 triangles); received 0 poses, 0 frames; 0 guest entities; datagrams in/out 0/0, malformed 0, stale 0, foreign 0
+[16:06:21] [Client thread/INFO] [minecraft-link]: /link: link host on 127.0.0.1:47851, waiting for a guest; sent 0 cameras, 0 collision snapshots (0 triangles); received 0 poses, 0 frames; 0 guest entities; datagrams in/out 0/0, malformed 0, stale 0, foreign 0
+[16:06:21] [Client thread/INFO] [minecraft-link]: autotest: START_PEER
+[16:06:21] [minecraft-link-frames/INFO] [minecraft-link]: pixel file /tmp/rewrite-bridge-93972-guest-1b517e36-0.frames mapped: 320x240, 3 slots, depth plane: true
+[16:06:21] [Client thread/INFO] [minecraft-link]: showing guest entity 1 (Fake Guest demo/cube) as a placeholder cube
+[16:06:21] [Client thread/INFO] [minecraft-link]: connected to Fake Guest (guest, protocol v1)
+[16:06:21] [Client thread/INFO] [minecraft-link]: guest spawned entity 1 (Fake Guest demo/cube)
+[16:06:21] [Client thread/INFO] [minecraft-link]: peer announced a pixel file: /tmp/rewrite-bridge-93972-guest-1b517e36-0.frames 320x240
+[16:06:21] [Client thread/INFO] [minecraft-link]: OpenGL: GL_VERSION 2.1 Metal - 90.5, GLSL 1.20, renderer Apple M5, vendor Apple, ARB_texture_float true, ARB_depth_texture true
+[16:06:21] [Client thread/INFO] [minecraft-link]: frame program linked (GLSL 1.20)
+[16:06:21] [Client thread/INFO] [minecraft-link]: first guest frame drawn: framebuffer 854x480, bound framebuffer object 1, viewport 854x480
+[16:06:23] [Client thread/INFO] [minecraft-link]: the guest asks for the input focus (/link focus guest to give it)
+[16:06:26] [Client thread/INFO] [minecraft-link]: autotest: EXTSHOT 21-host-cube
+[16:06:27] [Client thread/INFO] [minecraft-link]: autotest: screenshot .../1.12.2/21-host-cube-fbo.png (854x480)
+[16:06:28] [Client thread/INFO] [minecraft-link]: autotest: /fill -3 4 2 4 4 2 minecraft:stone
+[16:06:31] [Client thread/INFO] [minecraft-link]: autotest: EXTSHOT 22-host-wall
+[16:06:33] [Client thread/INFO] [minecraft-link]: autotest: screenshot .../1.12.2/22-host-wall-fbo.png (854x480)
+[16:06:35] [Client thread/INFO] [minecraft-link]: autotest: EXTSHOT 23-host-turned
+[16:06:37] [Client thread/INFO] [minecraft-link]: autotest: player feet at 0.5 4.0 0.5; last camera sent at 0.479 5.616 0.545; yaw 25.0 pitch 5.0; block below: Grass Block
+[16:06:37] [Client thread/INFO] [minecraft-link]: autotest: /link status
+[16:06:37] [Client thread/INFO] [minecraft-link]: /link: host on 127.0.0.1:47851, connected to Fake Guest (session 1b517e36), input focus with the host; sent 988 cameras, 4 collision snapshots (4632 triangles); received 988 poses, 986 frames; 1 guest entities; datagrams in/out 2040/1138, malformed 0, stale 0, foreign 0; frames drawn 983, reprojected 1651 (pixel file 320x240 with depth), host depth convention 0, camer
+[16:06:38] [Client thread/INFO] [minecraft-link]: autotest: EXTSHOT 24-host-status
+[16:06:39] [Client thread/INFO] [minecraft-link]: autotest: /link stop
+[16:06:39] [Client thread/INFO] [minecraft-link]: /link: stopping the link (bye, then half-close)
+[16:06:39] [minecraft-link-close/INFO] [minecraft-link]: link closed (1114 cameras, 5 collision snapshots, 0 poses sent)
+[16:06:41] [Client thread/INFO] [minecraft-link]: autotest: done, closing the game

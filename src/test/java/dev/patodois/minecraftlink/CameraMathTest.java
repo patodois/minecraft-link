@@ -152,4 +152,14 @@ class CameraMathTest {
         float[] ortho = arr(new Matrix4f().ortho(0, 854, 480, 0, 1000, 3000, false));
         assertTrue(Double.isNaN(CameraMath.glNearFar(ortho)[0]));
     }
+
+    @Test
+    void cameraPositionIsWhereTheViewMapsToTheOrigin() {
+        double[] pos = {100.5, 70.25, -30.0};
+        float[] view = CameraMath.view(pos, mcViewRotation(37, 12), Mapping.IDENTITY);
+        double[] c = CameraMath.cameraPosition(view);
+        assertEquals(pos[0], c[0], 1e-3);
+        assertEquals(pos[1], c[1], 1e-3);
+        assertEquals(pos[2], c[2], 1e-3);
+    }
 }
