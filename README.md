@@ -345,7 +345,7 @@ Forge and NeoForge jars are reobfuscated to SRG names by `reobfJarJar` and
 Unit tests (JUnit 5, in `common`): the coordinate mapping, camera matrix conversion (the view rotation against a real `PoseStack`, bobbing and
 `splitProjectionBob`, the four depth conventions, rewriting, linear depth), collision triangles for a full block, a slab and stairs, **both from hand-written
 boxes and from Minecraft's own block shapes** (the registries are bootstrapped; no window needed), pose interpolation, reprojection, the camera ring and
-the settings file. It also runs the guest role (a `Session`) against a link-java host in-process: `spawn` arrives before the first pose, `despawn` on stop, and the host ignores no pose.
+the settings file. It also runs the guest role (a `Session`) against a link-java host in-process: `spawn` arrives before the first pose, `despawn` on stop, and the host ignores no pose. With `RUST_FAKE_HOST_PORT=<port>` set it runs the same `Session` as a guest of the Rust `fake_host --port <port>` instead (the evidence is that host's log).
 
 ### Scripted client runs
 
