@@ -2,7 +2,6 @@ package dev.patodois.minecraftlink.client;
 
 import dev.patodois.minecraftlink.LinkSettings;
 import dev.patodois.rewritelink.Control.Role;
-import dev.patodois.rewritelink.Wire.WireException;
 import java.io.IOException;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.ChatComponentText;
@@ -65,6 +64,8 @@ public final class LinkManager {
         inputGate.release();
         remoteEntities.discardAll(s);
         frames.close();
+        if (!wait) frames.releaseIfNeeded(); // on the game thread: the textures go now, not at the next world render
+        scanner.release(); // do not keep the World, or a half-done scan
         Thread t = new Thread(() -> {
             s.closeBlocking();
             LOG.info("link closed ({} cameras, {} collision snapshots, {} poses sent)", s.camerasSent.get(), s.collisionsSent.get(), s.posesSent.get());
@@ -101,11 +102,7 @@ public final class LinkManager {
         Session s = session;
         if (s == null) return "not running";
         if (!s.isConnected()) return "no peer yet";
-        try {
-            s.setFocus(to);
-        } catch (WireException e) {
-            return "not connected";
-        }
+        s.setFocus(to); // queued: the link thread sends it
         return s.role == Role.HOST ? "input focus given to the " + to.wire : "asked the host for the input focus";
     }
 
@@ -140,6 +137,7 @@ public final class LinkManager {
      * used, shows the guest entities and draws the guest's frame behind what the world has in front of it.
      */
     void onWorldRendered(Minecraft mc, float partialTicks) {
+        frames.releaseIfNeeded(); // after /link stop there is no session, but the GL textures must go
         Session s = session;
         if (s == null || s.role != Role.HOST || mc.theWorld == null) return;
         if (!s.isConnected()) return;

@@ -62,14 +62,21 @@ final class CollisionScanner implements CollisionBuilder.Shapes {
         startedMs = 0;
     }
 
+    /**
+     * Lets go of the world: the scanner must not keep the World (chunks, entities, tile entities) alive
+     * after the player left it or the link stopped. Game thread; also drops any scan in progress.
+     */
+    void release() {
+        reset();
+        level = null;
+        mask = null;
+    }
+
     void tick(Minecraft mc, Session s) {
         if (!s.isConnected() || mc.thePlayer == null || mc.theWorld == null) return;
         long now = System.currentTimeMillis();
-        level = mc.theWorld;
         // the feet position (in 1.7.10 the client player's posY is the eye position)
         double px = mc.thePlayer.posX, py = mc.thePlayer.boundingBox.minY, pz = mc.thePlayer.posZ;
-        int r = s.settings.collisionRadius + 3;
-        mask = AxisAlignedBB.getBoundingBox(Math.floor(px) - r, Math.floor(py) - r, Math.floor(pz) - r, Math.floor(px) + r, Math.floor(py) + r, Math.floor(pz) + r);
         if (building == null) {
             if (busy) return;
             boolean moved = !haveLast || Math.sqrt(sq(px - lastX) + sq(py - lastY) + sq(pz - lastZ)) >= s.settings.collisionMoveBlocks;
@@ -86,6 +93,12 @@ final class CollisionScanner implements CollisionBuilder.Shapes {
             lastZ = pz;
             haveLast = true;
         }
+        level = mc.theWorld;
+        // One mask per tick (the pool recycles boxes), but around the centre of THIS scan (bx, by, bz, where it started), not around
+        // wherever the player has walked to since: a mask that follows the player cuts the trailing edge of the scan area off the boxes
+        // of partial blocks (stairs, slabs, fences) when the player moves more than three blocks during a scan.
+        double[] mb = maskBounds(bx, by, bz, s.settings.collisionRadius);
+        mask = AxisAlignedBB.getBoundingBox(mb[0], mb[1], mb[2], mb[3], mb[4], mb[5]);
         long t0 = System.nanoTime();
         while (layer < building.layers() && System.nanoTime() - t0 < BUDGET_NS) {
             building.scanLayer(this, layer++);
@@ -93,8 +106,12 @@ final class CollisionScanner implements CollisionBuilder.Shapes {
         if (layer < building.layers()) return;
         CollisionBuilder done = building;
         building = null;
+        level = null; // only needed while blocks are read; do not hold the world between scans
+        mask = null;
         busy = true;
-        double cx = px, cy = py, cz = pz;
+        // The geometry is centred on the block the player stood in when the scan started (bx, by, bz), so that is the
+        // snapshot's centre too, not the position the player has walked to while the scan ran.
+        double cx = lastX, cy = lastY, cz = lastZ;
         worker.execute(() -> {
             try {
                 List<float[]> world = done.triangles();
@@ -114,6 +131,15 @@ final class CollisionScanner implements CollisionBuilder.Shapes {
                 busy = false;
             }
         });
+    }
+
+    /**
+     * Bounds {minX, minY, minZ, maxX, maxY, maxZ} of the box every block's collision boxes are intersected with, for a scan that
+     * started on block (bx, by, bz). It depends on nothing but the scan's own centre.
+     */
+    static double[] maskBounds(int bx, int by, int bz, int collisionRadius) {
+        int r = collisionRadius + 3;
+        return new double[] {bx - r, by - r, bz - r, bx + r, by + r, bz + r};
     }
 
     private static double sq(double v) {

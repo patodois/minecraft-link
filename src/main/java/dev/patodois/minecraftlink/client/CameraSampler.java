@@ -56,7 +56,7 @@ final class CameraSampler {
         double oz = e.lastTickPosZ + (e.posZ - e.lastTickPosZ) * partialTicks;
 
         float[] view = CameraMath.view(new double[] {ox, oy, oz}, mv, s.mapping);
-        CameraMath.Projection p = CameraMath.normalize(proj, near * k, far * k);
+        CameraMath.Projection p = CameraMath.normalize(proj, near, far, k);
 
         int w, h;
         Framebuffer fb = mc.getFramebuffer();

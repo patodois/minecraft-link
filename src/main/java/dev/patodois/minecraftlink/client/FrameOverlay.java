@@ -133,6 +133,13 @@ final class FrameOverlay {
     /** GL_VERSION, GLSL version and framebuffer facts, logged once and shown by /link status. */
     volatile String glInfo = "";
 
+    /**
+     * The most pixels per frame this mod takes. CONTRACT 9.6 lets a file be 2^26 pixels (8192 x 8192) and a receiver refuse
+     * larger ones of its own accord: the reprojection runs on the CPU and keeps several copies of the frame, so a 4 Mpixel
+     * frame (2560 x 1600) already costs about a hundred megabytes. A bigger file is refused with a note.
+     */
+    static final long MAX_PIXELS = 4L << 20;
+
     // ---- render thread only
     private int program, uHostDepth, uGuestColor, uGuestDepth, uDepthParams, uFlags;
     private int hostDepthTex, colorTex, depthTex;
@@ -196,6 +203,12 @@ final class FrameOverlay {
                     if (wantPath != null && !wantPath.equals(failedPath)) {
                         try {
                             reader = PixelFile.Reader.open(Paths.get(wantPath));
+                            if ((long) reader.width * reader.height > MAX_PIXELS) {
+                                String why = reader.width + "x" + reader.height + " is more than the " + MAX_PIXELS + " pixels this mod takes";
+                                reader.close();
+                                reader = null;
+                                throw new java.io.IOException(why);
+                            }
                             readerPath = wantPath;
                             LinkManager.LOG.info("pixel file {} mapped: {}x{}, {} slots, depth plane: {}", wantPath, reader.width, reader.height,
                                     reader.slots, reader.hasDepth());
@@ -263,10 +276,9 @@ final class FrameOverlay {
      */
     void draw(Minecraft mc, Session s) {
         if (broken) return;
-        if (needRelease) {
-            needRelease = false;
-            release();
-        }
+        releaseIfNeeded();
+        // Frames that stopped arriving are not drawn: the last picture must not hang in the world (and the placeholder is back, see visible()).
+        if (!s.framesFresh()) return;
         Composed c = composed.get();
         if (c == null && uploadedVersion == 0) return;
         int prevActive = 0, prevProgram = 0, prevTex0 = 0, prevTex1 = 0, prevTex2 = 0;
@@ -496,6 +508,26 @@ final class FrameOverlay {
         texW = texH = 0;
     }
 
+    /**
+     * Render thread, every frame, session or not (or at once when the link is stopped on the game thread): deletes the textures
+     * after the link stopped, because the worker has no GL access and {@link #draw} only runs while a host session exists.
+     */
+    void releaseIfNeeded() {
+        if (needRelease) {
+            needRelease = false;
+            release();
+        }
+    }
+
+    /**
+     * Whether a guest frame is on screen this frame: frames arrived within the last second, the host draws them, and one has
+     * been uploaded. {@link RemoteEntities} hides the placeholder exactly then, so the overlay and the placeholder never
+     * show together and never both disappear. Render thread.
+     */
+    boolean visible(Session s) {
+        return !broken && colorTex != 0 && uploadedVersion != 0 && s.framesFresh();
+    }
+
     /** Render thread: frees the textures (the program stays for the next session). */
     private void release() {
         deleteGuestTextures();
@@ -504,5 +536,7 @@ final class FrameOverlay {
         hostW = hostH = 0;
         uploadedVersion = 0;
         hasDepthUploaded = false;
+        colorBuf = null; // direct memory goes with the garbage collector once nothing holds the buffers
+        depthBuf = null;
     }
 }
