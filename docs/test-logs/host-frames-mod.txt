@@ -1,0 +1,35 @@
+# runObfClient: the mod's own log lines
+[15:43:36] [Client thread/INFO] [minecraft-link]: autotest: 36 lines from .../scripts/host-obf.txt, screenshots to .../1.12.2
+[15:43:36] [Client thread/INFO] [minecraft-link]: Minecraft Link loaded; commands: /link host, /link guest, /link stop, /link status, /link focus <host|guest>
+[15:43:47] [Client thread/INFO] [minecraft-link]: autotest: /gamerule doDaylightCycle false
+[15:43:47] [Client thread/INFO] [minecraft-link]: autotest: /time set 6000
+[15:43:47] [Client thread/INFO] [minecraft-link]: autotest: /weather clear
+[15:43:47] [Client thread/INFO] [minecraft-link]: autotest: /gamerule sendCommandFeedback false
+[15:43:47] [Client thread/INFO] [minecraft-link]: autotest: /tp @p 0.5 4 0.5
+[15:43:50] [Client thread/INFO] [minecraft-link]: autotest: EXTSHOT 20-host-before-link
+[15:43:50] [Client thread/INFO] [minecraft-link]: autotest: /link host 47854
+[15:43:50] [Client thread/INFO] [minecraft-link]: link started: host on 127.0.0.1:47854, waiting for a guest; sent 0 cameras, 0 collision snapshots (0 triangles); received 0 poses, 0 frames; 0 guest entities; datagrams in/out 0/0, malformed 0, stale 0, foreign 0
+[15:43:50] [Client thread/INFO] [minecraft-link]: /link: link host on 127.0.0.1:47854, waiting for a guest; sent 0 cameras, 0 collision snapshots (0 triangles); received 0 poses, 0 frames; 0 guest entities; datagrams in/out 0/0, malformed 0, stale 0, foreign 0
+[15:43:50] [Client thread/INFO] [minecraft-link]: autotest: START_PEER
+[15:43:50] [minecraft-link-frames/INFO] [minecraft-link]: pixel file /tmp/rewrite-bridge-81348-guest-4b7ed63d-0.frames mapped: 320x240, 3 slots, depth plane: true
+[15:43:50] [Client thread/INFO] [minecraft-link]: connected to Fake Guest (guest, protocol v1)
+[15:43:50] [Client thread/INFO] [minecraft-link]: guest spawned entity 1 (Fake Guest demo/cube)
+[15:43:50] [Client thread/INFO] [minecraft-link]: peer announced a pixel file: /tmp/rewrite-bridge-81348-guest-4b7ed63d-0.frames 320x240
+[15:43:50] [Client thread/INFO] [minecraft-link]: showing guest entity 1 (Fake Guest demo/cube) as a placeholder cube
+[15:43:51] [Client thread/INFO] [minecraft-link]: OpenGL: GL_VERSION 2.1 Metal - 90.5, GLSL 1.20, renderer Apple M5, vendor Apple, ARB_texture_float true, ARB_depth_texture true
+[15:43:51] [Client thread/INFO] [minecraft-link]: frame program linked (GLSL 1.20)
+[15:43:51] [Client thread/INFO] [minecraft-link]: first guest frame drawn: framebuffer 854x480, bound framebuffer object 1, viewport 854x480
+[15:43:52] [Client thread/INFO] [minecraft-link]: the guest asks for the input focus (/link focus guest to give it)
+[15:43:55] [Client thread/INFO] [minecraft-link]: autotest: EXTSHOT 21-host-cube
+[15:43:55] [Client thread/INFO] [minecraft-link]: autotest: screenshot .../1.12.2/21-host-cube-fbo.png (854x480)
+[15:43:55] [Client thread/INFO] [minecraft-link]: autotest: /fill -3 4 2 4 4 2 minecraft:stone
+[15:43:58] [Client thread/INFO] [minecraft-link]: autotest: EXTSHOT 22-host-wall
+[15:43:59] [Client thread/INFO] [minecraft-link]: autotest: screenshot .../1.12.2/22-host-wall-fbo.png (854x480)
+[15:44:01] [Client thread/INFO] [minecraft-link]: autotest: EXTSHOT 23-host-turned
+[15:44:02] [Client thread/INFO] [minecraft-link]: autotest: /link status
+[15:44:02] [Client thread/INFO] [minecraft-link]: /link: host on 127.0.0.1:47854, connected to Fake Guest (session 4b7ed63d), input focus with the host; sent 679 cameras, 3 collision snapshots (4632 triangles); received 679 poses, 677 frames; 1 guest entities; datagrams in/out 1402/788, malformed 0, stale 0, foreign 0; frames drawn 675, reprojected 1252 (pixel file 320x240 with depth), host depth convention 0, camera
+[15:44:02] [Client thread/INFO] [minecraft-link]: autotest: EXTSHOT 24-host-status
+[15:44:02] [Client thread/INFO] [minecraft-link]: autotest: /link stop
+[15:44:02] [Client thread/INFO] [minecraft-link]: /link: stopping the link (bye, then half-close)
+[15:44:02] [minecraft-link-close/INFO] [minecraft-link]: link closed (712 cameras, 3 collision snapshots, 0 poses sent)
+[15:44:04] [Client thread/INFO] [minecraft-link]: autotest: done, closing the game

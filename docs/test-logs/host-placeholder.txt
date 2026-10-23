@@ -1,0 +1,44 @@
+# runClient vs fake_guest without frames (placeholder cube): peer log
+[guest   0.00s] connecting to 127.0.0.1:47852
+[guest   0.01s] connected: host "Minecraft Java 1.12.2", protocol v1, session 0xa8a8af1d
+[guest   0.02s] cube placed 4 m ahead of the camera at [0.5, 5.61, 4.55]
+[guest   0.14s] collision query 1: 4596 triangles within 16 m of [0.5, 4.0, 0.5]
+[guest   0.14s] cube stands on the host's ground at y 4.00
+[guest   1.00s] got 60 cameras; sent 60 poses, 0 frames (render 0.0 ms each); focus with the host
+[guest   2.00s] got 60 cameras; sent 60 poses, 0 frames (render 0.0 ms each); focus with the host
+[guest   2.01s] asking the host for input focus
+[guest   3.00s] got 60 cameras; sent 60 poses, 0 frames (render 0.0 ms each); focus with the host
+[guest   4.00s] got 60 cameras; sent 60 poses, 0 frames (render 0.0 ms each); focus with the host
+[guest   5.00s] got 60 cameras; sent 60 poses, 0 frames (render 0.0 ms each); focus with the host
+[guest   5.03s] collision query 2: 4632 triangles within 16 m of [0.5, 4.0, 0.5]
+[guest   6.00s] got 60 cameras; sent 60 poses, 0 frames (render 0.0 ms each); focus with the host
+[guest   7.00s] got 60 cameras; sent 60 poses, 0 frames (render 0.0 ms each); focus with the host
+[guest   8.00s] got 60 cameras; sent 60 poses, 0 frames (render 0.0 ms each); focus with the host
+[guest   8.53s] LOST the host: peer said bye: closing
+
+# the mod's own log lines
+[15:40:23] [Client thread/INFO] [minecraft-link]: autotest: 26 lines from .../scripts/placeholder.txt, screenshots to .../1.12.2
+[15:40:23] [Client thread/INFO] [minecraft-link]: Minecraft Link loaded; commands: /link host, /link guest, /link stop, /link status, /link focus <host|guest>
+[15:40:35] [Client thread/INFO] [minecraft-link]: autotest: /gamerule doDaylightCycle false
+[15:40:35] [Client thread/INFO] [minecraft-link]: autotest: /time set 6000
+[15:40:35] [Client thread/INFO] [minecraft-link]: autotest: /weather clear
+[15:40:35] [Client thread/INFO] [minecraft-link]: autotest: /gamerule sendCommandFeedback false
+[15:40:35] [Client thread/INFO] [minecraft-link]: autotest: /tp @p 0.5 4 0.5
+[15:40:37] [Client thread/INFO] [minecraft-link]: autotest: /link host 47852
+[15:40:37] [Client thread/INFO] [minecraft-link]: link started: host on 127.0.0.1:47852, waiting for a guest; sent 0 cameras, 0 collision snapshots (0 triangles); received 0 poses, 0 frames; 0 guest entities; datagrams in/out 0/0, malformed 0, stale 0, foreign 0
+[15:40:37] [Client thread/INFO] [minecraft-link]: /link: link host on 127.0.0.1:47852, waiting for a guest; sent 0 cameras, 0 collision snapshots (0 triangles); received 0 poses, 0 frames; 0 guest entities; datagrams in/out 0/0, malformed 0, stale 0, foreign 0
+[15:40:37] [Client thread/INFO] [minecraft-link]: autotest: START_PEER
+[15:40:37] [Client thread/INFO] [minecraft-link]: connected to Fake Guest (guest, protocol v1)
+[15:40:37] [Client thread/INFO] [minecraft-link]: guest spawned entity 1 (Fake Guest demo/cube)
+[15:40:37] [Client thread/INFO] [minecraft-link]: showing guest entity 1 (Fake Guest demo/cube) as a placeholder cube
+[15:40:39] [Client thread/INFO] [minecraft-link]: the guest asks for the input focus (/link focus guest to give it)
+[15:40:42] [Client thread/INFO] [minecraft-link]: autotest: EXTSHOT 30-placeholder
+[15:40:42] [Client thread/INFO] [minecraft-link]: autotest: screenshot .../1.12.2/30-placeholder-fbo.png (854x480)
+[15:40:42] [Client thread/INFO] [minecraft-link]: autotest: /fill -3 4 2 4 4 2 minecraft:stone
+[15:40:45] [Client thread/INFO] [minecraft-link]: autotest: EXTSHOT 31-placeholder-wall
+[15:40:46] [Client thread/INFO] [minecraft-link]: autotest: /link status
+[15:40:46] [Client thread/INFO] [minecraft-link]: /link: host on 127.0.0.1:47852, connected to Fake Guest (session a8a8af1d), input focus with the host; sent 511 cameras, 2 collision snapshots (4632 triangles); received 511 poses, 0 frames; 1 guest entities; datagrams in/out 545/588, malformed 0, stale 0, foreign 0; frames drawn 0, reprojected 0, host depth convention 0, camera depth_range 0
+[15:40:46] [Client thread/INFO] [minecraft-link]: autotest: /link stop
+[15:40:46] [Client thread/INFO] [minecraft-link]: /link: stopping the link (bye, then half-close)
+[15:40:46] [minecraft-link-close/INFO] [minecraft-link]: link closed (511 cameras, 2 collision snapshots, 0 poses sent)
+[15:40:48] [Client thread/INFO] [minecraft-link]: autotest: done, closing the game

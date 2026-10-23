@@ -169,11 +169,11 @@ public final class Mapping {
         return new float[] {(float) (qx / n), (float) (qy / n), (float) (qz / n), (float) (qw / n)};
     }
 
-    static double[] cross(double[] a, double[] b) {
+    public static double[] cross(double[] a, double[] b) {
         return new double[] {a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]};
     }
 
-    static double[] norm(double[] a) {
+    public static double[] norm(double[] a) {
         double n = Math.sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]);
         return n < 1e-12 ? new double[] {0, 0, 1} : new double[] {a[0] / n, a[1] / n, a[2] / n};
     }

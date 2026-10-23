@@ -3,13 +3,12 @@ package dev.patodois.minecraftlink.client;
 import dev.patodois.minecraftlink.Mapping;
 import dev.patodois.rewritelink.Wire;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.util.Mth;
+import net.minecraft.client.entity.EntityPlayerSP;
+import net.minecraft.util.math.MathHelper;
 
 /**
  * Guest side: once per client tick, offers the local player as the pose of entity
- * {@code guest_entity}. The pose is the player's state at the end of the tick (the interpolated
- * position at partial tick 1):
+ * {@code guest_entity}. The pose is the player's state at the end of the tick:
  * <ul>
  *   <li>translation: the feet position (the entity origin) in link space;</li>
  *   <li>rotation: the view direction (yaw and pitch) as in {@link Mapping#toLinkRotation};</li>
@@ -30,7 +29,7 @@ final class GuestPublisher {
     }
 
     void tick(Minecraft mc, Session s) {
-        LocalPlayer p = mc.player;
+        EntityPlayerSP p = mc.player;
         if (p == null || !s.isConnected()) return;
         long seen = s.sessionsSeen.get();
         if (seen != lastSessions) {
@@ -38,13 +37,13 @@ final class GuestPublisher {
             first = true;
         }
         Mapping m = s.mapping;
-        double dx = p.getX() - p.xo, dy = p.getY() - p.yo, dz = p.getZ() - p.zo;
+        double dx = p.posX - p.prevPosX, dy = p.posY - p.prevPosY, dz = p.posZ - p.prevPosZ;
         boolean teleport = first || dx * dx + dy * dy + dz * dz > 64;
         first = false;
-        double[] pos = m.toLinkPos(p.getX(), p.getY(), p.getZ());
+        double[] pos = m.toLinkPos(p.posX, p.posY, p.posZ);
         double[] vel = m.toLinkVelocityPerTick(dx, dy, dz);
-        float[] rot = m.toLinkRotation(p.getYRot(), p.getXRot());
-        double yawRate = Mth.wrapDegrees(p.getYRot() - p.yRotO);
+        float[] rot = m.toLinkRotation(p.rotationYaw, p.rotationPitch);
+        double yawRate = MathHelper.wrapDegrees(p.rotationYaw - p.prevRotationYaw);
         double wy = Mapping.yawRateToAngularY(yawRate);
         s.offerPose(new Wire.Pose(s.settings.guestEntity, teleport ? Wire.POSE_TELEPORT : 0, Wire.nowUs(),
                 new float[] {(float) pos[0], (float) pos[1], (float) pos[2]}, rot, new float[] {1, 1, 1},

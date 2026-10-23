@@ -22,8 +22,8 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * One running link (host or guest).
  *
- * <p>Threads: the game thread (which is also the render thread in Minecraft 26.3: one thread
- * extracts and draws) never calls into {@link Link}; it drops its samples into the
+ * <p>Threads: the game thread (which is also the render thread in Minecraft 1.12.2: one thread
+ * ticks, extracts and draws) never calls into {@link Link}; it drops its samples into the
  * {@code AtomicReference}s below ({@link #offerCamera}, {@link #offerCollision}, {@link #offerPose})
  * and reads {@link #remotes} and the counters. The link thread ({@link LinkRunner}, one
  * daemon thread, 2 ms period) polls the link, sends whatever was offered, and puts what arrives into
@@ -32,7 +32,29 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 final class Session {
     /** Collision snapshot ready to send: centre and radius in link space, triangles in link space. */
-    record CollisionOut(float[] center, float radius, List<float[]> triangles) {}
+    static final class CollisionOut {
+        private final float[] center;
+        private final float radius;
+        private final List<float[]> triangles;
+
+        CollisionOut(float[] center, float radius, List<float[]> triangles) {
+            this.center = center;
+            this.radius = radius;
+            this.triangles = triangles;
+        }
+
+        float[] center() {
+            return center;
+        }
+
+        float radius() {
+            return radius;
+        }
+
+        List<float[]> triangles() {
+            return triangles;
+        }
+    }
 
     /** A guest entity as seen by the host. */
     static final class Remote {
@@ -41,9 +63,6 @@ final class Session {
         volatile String asset;
         volatile String provider;
         final PoseTrack track = new PoseTrack();
-        /** Game thread only. */
-        Object display;
-        float lastScaleX = Float.NaN, lastScaleY, lastScaleZ;
 
         Remote(long id, String provider, String asset, String name) {
             this.id = id;
@@ -105,7 +124,7 @@ final class Session {
     }
 
     static Session open(Role role, LinkSettings settings, String localName) throws IOException {
-        LinkConfig cfg = new LinkConfig("Minecraft Java " + net.minecraft.SharedConstants.getCurrentVersion().name());
+        LinkConfig cfg = new LinkConfig("Minecraft Java " + net.minecraftforge.common.ForgeVersion.mcVersion);
         cfg.controlPort = settings.port;
         cfg.udpPort = settings.udpPort;
         cfg.heartbeatMs = settings.heartbeatMs;
@@ -168,7 +187,7 @@ final class Session {
             }
             Wire.Pose pose = poseOut.getAndSet(null);
             if (pose != null && role == Role.GUEST) {
-                link.sendPoses(List.of(pose));
+                link.sendPoses(java.util.Collections.singletonList(pose));
                 posesSent.incrementAndGet();
             }
         } catch (WireException e) {
@@ -177,13 +196,15 @@ final class Session {
     }
 
     private void onEvent(LinkEvent e) {
-        if (e instanceof LinkEvent.Connected c) {
+        if (e instanceof LinkEvent.Connected) {
+            LinkEvent.Connected c = (LinkEvent.Connected) e;
             peer = c.peer();
             focus = Role.HOST; // the host has the focus when a session starts
             sessionsSeen.incrementAndGet();
             if (role == Role.GUEST) spawnPending = true;
             messages.add("connected to " + c.peer().game() + " (" + c.peer().role().wire + ", protocol v" + c.peer().protocol() + ")");
-        } else if (e instanceof LinkEvent.Lost l) {
+        } else if (e instanceof LinkEvent.Lost) {
+            LinkEvent.Lost l = (LinkEvent.Lost) e;
             peer = null;
             focus = Role.HOST;
             for (Remote r : remotes.values()) discarded.add(r);
@@ -194,19 +215,20 @@ final class Session {
             cameraOut.set(null);
             poseOut.set(null);
             messages.add("link lost: " + l.reason());
-        } else if (e instanceof LinkEvent.HandshakeFailed h) {
-            messages.add("handshake failed: " + h.reason());
-        } else if (e instanceof LinkEvent.Spawn s) {
-            Control.Spawn sp = s.spawn();
+        } else if (e instanceof LinkEvent.HandshakeFailed) {
+            messages.add("handshake failed: " + ((LinkEvent.HandshakeFailed) e).reason());
+        } else if (e instanceof LinkEvent.Spawn) {
+            Control.Spawn sp = ((LinkEvent.Spawn) e).spawn();
             if (role == Role.HOST) {
                 Remote old = remotes.put(sp.entity(), new Remote(sp.entity(), sp.provider(), sp.asset(), sp.name()));
                 if (old != null) discarded.add(old);
                 messages.add("guest spawned entity " + sp.entity() + " (" + sp.provider() + " " + sp.asset() + ")");
             }
-        } else if (e instanceof LinkEvent.Despawn d) {
-            Remote r = remotes.remove(d.entity());
+        } else if (e instanceof LinkEvent.Despawn) {
+            Remote r = remotes.remove(((LinkEvent.Despawn) e).entity());
             if (r != null) discarded.add(r);
-        } else if (e instanceof LinkEvent.Poses p) {
+        } else if (e instanceof LinkEvent.Poses) {
+            LinkEvent.Poses p = (LinkEvent.Poses) e;
             posesReceived.addAndGet(p.poses().size());
             if (role == Role.HOST) {
                 for (Wire.Pose pose : p.poses()) {
@@ -216,21 +238,22 @@ final class Session {
             }
         } else if (e instanceof LinkEvent.Camera) {
             camerasReceived.incrementAndGet();
-        } else if (e instanceof LinkEvent.Focus f) {
+        } else if (e instanceof LinkEvent.Focus) {
+            LinkEvent.Focus f = (LinkEvent.Focus) e;
             if (f.requested()) {
                 messages.add("the guest asks for the input focus (/link focus guest to give it)");
             } else {
                 focus = f.focus();
                 messages.add("input focus is now with the " + f.focus().wire);
             }
-        } else if (e instanceof LinkEvent.FrameChannel fc) {
-            frameChannel.set(fc.channel());
-            messages.add("peer announced a pixel file: " + fc.channel().path() + " " + fc.channel().width() + "x"
-                    + fc.channel().height());
-        } else if (e instanceof LinkEvent.Frame f) {
+        } else if (e instanceof LinkEvent.FrameChannel) {
+            Control.FrameChannel ch = ((LinkEvent.FrameChannel) e).channel();
+            frameChannel.set(ch);
+            messages.add("peer announced a pixel file: " + ch.path() + " " + ch.width() + "x" + ch.height());
+        } else if (e instanceof LinkEvent.Frame) {
             framesReceived.incrementAndGet();
             lastFrameMs = System.currentTimeMillis();
-            latestFrame.set(f);
+            latestFrame.set((LinkEvent.Frame) e);
         }
     }
 

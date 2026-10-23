@@ -8,7 +8,41 @@ package dev.patodois.minecraftlink;
  */
 public final class CameraRing {
     /** A camera as sent: world to view and view to clip, column-major, link space. */
-    public record Entry(int seq, float[] view, float[] proj, float near, float far) {}
+    public static final class Entry {
+        private final int seq;
+        private final float[] view;
+        private final float[] proj;
+        private final float near;
+        private final float far;
+
+        public Entry(int seq, float[] view, float[] proj, float near, float far) {
+            this.seq = seq;
+            this.view = view;
+            this.proj = proj;
+            this.near = near;
+            this.far = far;
+        }
+
+        public int seq() {
+            return seq;
+        }
+
+        public float[] view() {
+            return view;
+        }
+
+        public float[] proj() {
+            return proj;
+        }
+
+        public float near() {
+            return near;
+        }
+
+        public float far() {
+            return far;
+        }
+    }
 
     private final Entry[] ring;
     private int next;

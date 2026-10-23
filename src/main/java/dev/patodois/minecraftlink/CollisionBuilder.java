@@ -82,7 +82,20 @@ public final class CollisionBuilder {
     // ------------------------------------------------------------------ triangulation
 
     /** One axis-aligned face: {@code axis} 0/1/2 = x/y/z, {@code sign} +1/-1, plane coordinate, the two other axes' ranges. */
-    private record Face(int axis, int sign, double plane, double u0, double u1, double v0, double v1) {}
+    private static final class Face {
+        final int axis, sign;
+        final double plane, u0, u1, v0, v1;
+
+        Face(int axis, int sign, double plane, double u0, double u1, double v0, double v1) {
+            this.axis = axis;
+            this.sign = sign;
+            this.plane = plane;
+            this.u0 = u0;
+            this.u1 = u1;
+            this.v0 = v0;
+            this.v1 = v1;
+        }
+    }
 
     private static boolean eq(double a, double b) {
         return Math.abs(a - b) < 1e-6;

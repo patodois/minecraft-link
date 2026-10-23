@@ -4,15 +4,15 @@ import dev.patodois.minecraftlink.LinkSettings;
 import dev.patodois.rewritelink.Control.Role;
 import dev.patodois.rewritelink.Wire.WireException;
 import java.io.IOException;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
-import net.minecraft.network.chat.Component;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import net.minecraft.util.text.TextComponentString;
+import net.minecraftforge.fml.common.Loader;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /** Owns the (at most one) running {@link Session} and everything that follows the player's world. Game thread only, except where noted. */
 public final class LinkManager {
-    static final Logger LOG = LoggerFactory.getLogger("minecraft-link");
+    static final Logger LOG = LogManager.getLogger("minecraft-link");
     public static final LinkManager INSTANCE = new LinkManager();
 
     LinkSettings settings = new LinkSettings();
@@ -30,18 +30,18 @@ public final class LinkManager {
     }
 
     void loadSettings() {
-        settings = LinkSettings.load(FabricLoader.getInstance().getConfigDir().resolve("minecraft-link.json"), LOG::warn);
+        settings = LinkSettings.load(Loader.instance().getConfigDir().toPath().resolve("minecraft-link.json"), msg -> LOG.warn(msg));
     }
 
     /** {@code /link host} / {@code /link guest}. Returns a line for the player. */
     String start(Role role, Integer port) {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.level == null || mc.player == null) return "join a world first";
+        Minecraft mc = Minecraft.getMinecraft();
+        if (mc.world == null || mc.player == null) return "join a world first";
         if (session != null) return "already running (" + session.describe() + "); /link stop first";
         loadSettings();
         if (port != null) settings.port = port;
         try {
-            session = Session.open(role, settings, mc.getUser().getName());
+            session = Session.open(role, settings, mc.getSession().getUsername());
         } catch (IOException e) {
             LOG.warn("could not start the link", e);
             return "could not start the " + role.wire + ": " + e.getMessage();
@@ -112,10 +112,11 @@ public final class LinkManager {
 
     // ------------------------------------------------------------------ events (game thread)
 
+    /** End of every client tick. */
     void onClientTick(Minecraft mc) {
         Session s = session;
         if (s == null) return;
-        if (mc.level == null || mc.player == null) {
+        if (mc.world == null || mc.player == null) {
             // left the world: end the session politely
             session = null;
             LOG.info("left the world, closing the link");
@@ -124,7 +125,7 @@ public final class LinkManager {
         }
         for (String m; (m = s.messages.poll()) != null; ) {
             LOG.info("{}", m);
-            mc.player.sendSystemMessage(Component.literal("[link] " + m));
+            mc.player.sendMessage(new TextComponentString("[link] " + m));
         }
         inputGate.tick(mc, s);
         if (s.role == Role.HOST) {
@@ -134,25 +135,17 @@ public final class LinkManager {
         }
     }
 
-    /** Called on the render thread at the start of every frame's extraction, before entities are extracted. */
-    public void beforeExtract(Minecraft mc) {
+    /**
+     * Render thread, once per drawn frame, after the world (terrain, entities, particles, weather) is in the
+     * framebuffer and before the hand and the GUI: {@code RenderWorldLastEvent}. Samples the camera the game just
+     * used, shows the guest entities and draws the guest's frame behind what the world has in front of it.
+     */
+    void onWorldRendered(Minecraft mc, float partialTicks) {
         Session s = session;
-        if (s == null || s.role != Role.HOST || mc.level == null) return;
-        remoteEntities.update(mc, s);
-        frames.upload(mc, s);
-    }
-
-    /** Called on the render thread once per drawn frame, with the camera Minecraft is about to render with. */
-    void onLevelStart(Minecraft mc, net.minecraft.client.renderer.state.level.CameraRenderState camera) {
-        Session s = session;
-        if (s == null || s.role != Role.HOST || !s.isConnected()) return;
-        CameraSampler.sample(mc, s, camera);
-    }
-
-    /** Render thread, end of the level's main pass. */
-    public void onLevelEnd(Minecraft mc) {
-        Session s = session;
-        if (s == null || s.role != Role.HOST || !s.isConnected()) return;
+        if (s == null || s.role != Role.HOST || mc.world == null) return;
+        if (!s.isConnected()) return;
+        CameraSampler.sample(mc, s, partialTicks);
+        remoteEntities.draw(mc, s, partialTicks);
         frames.draw(mc, s);
     }
 }

@@ -1,16 +1,17 @@
 package dev.patodois.minecraftlink.client;
 
 import dev.patodois.minecraftlink.CollisionBuilder;
-import java.util.IdentityHashMap;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import net.minecraft.block.Block;
+import net.minecraft.block.material.Material;
+import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.shapes.VoxelShape;
+import net.minecraft.util.math.AxisAlignedBB;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
 
 /**
  * Host side: keeps a snapshot of the block collision shapes around the player and offers it to the
@@ -20,12 +21,18 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  *
  * <p>A new scan starts when the player has moved {@code collision_move_blocks} from the last
  * snapshot's centre, or {@code collision_interval_ms} after the last scan started (this is how
- * block changes are noticed: Minecraft has no client-side block-change event to hook, so the area is
+ * block changes are noticed: Minecraft 1.12.2 has no client-side block-change event worth hooking, so the area is
  * re-read and an unchanged result is not sent again, except as a refresh every five seconds).
+ *
+ * <p>The shapes are what the game itself uses for collision: {@code IBlockState.getCollisionBoundingBox} for a
+ * block that is a plain full cube or has no collision, and {@code addCollisionBoxToList} (the list of boxes the
+ * player collides with: stairs, slabs, fences, ...) for everything else.
  */
 final class CollisionScanner implements CollisionBuilder.Shapes {
     private static final long BUDGET_NS = 1_000_000;
     private static final long REFRESH_MS = 5000;
+
+    private static final double[][] FULL = {{0, 0, 0, 1, 1, 1}};
 
     private final ExecutorService worker = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "minecraft-link-collision");
@@ -41,9 +48,9 @@ final class CollisionScanner implements CollisionBuilder.Shapes {
     private boolean haveLast;
     private long lastHash;
     private long lastSentMs;
-    private ClientLevel level;
+    private World level;
     private final BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
-    private final IdentityHashMap<VoxelShape, double[][]> cache = new IdentityHashMap<>();
+    private final List<AxisAlignedBB> boxList = new ArrayList<AxisAlignedBB>();
     private volatile boolean busy;
 
     void reset() {
@@ -52,14 +59,13 @@ final class CollisionScanner implements CollisionBuilder.Shapes {
         lastHash = 0;
         lastSentMs = 0;
         startedMs = 0;
-        cache.clear();
     }
 
     void tick(Minecraft mc, Session s) {
-        if (!s.isConnected() || mc.player == null || mc.level == null) return;
+        if (!s.isConnected() || mc.player == null || mc.world == null) return;
         long now = System.currentTimeMillis();
-        level = mc.level;
-        double px = mc.player.getX(), py = mc.player.getY(), pz = mc.player.getZ();
+        level = mc.world;
+        double px = mc.player.posX, py = mc.player.posY, pz = mc.player.posZ;
         if (building == null) {
             if (busy) return;
             boolean moved = !haveLast || Math.sqrt(sq(px - lastX) + sq(py - lastY) + sq(pz - lastZ)) >= s.settings.collisionMoveBlocks;
@@ -112,20 +118,21 @@ final class CollisionScanner implements CollisionBuilder.Shapes {
 
     @Override
     public double[][] boxesAt(int x, int y, int z) {
-        pos.set(x, y, z);
-        BlockState st = level.getBlockState(pos);
-        if (st.isAir()) return null;
-        VoxelShape shape = st.getCollisionShape(level, pos);
-        if (shape.isEmpty()) return null;
-        double[][] boxes = cache.get(shape);
-        if (boxes == null) {
-            List<AABB> list = shape.toAabbs();
-            boxes = new double[list.size()][];
-            for (int i = 0; i < boxes.length; i++) {
-                AABB b = list.get(i);
-                boxes[i] = new double[] {b.minX, b.minY, b.minZ, b.maxX, b.maxY, b.maxZ};
-            }
-            if (cache.size() < 4096) cache.put(shape, boxes);
+        pos.setPos(x, y, z);
+        IBlockState st = level.getBlockState(pos);
+        if (st.getMaterial() == Material.AIR) return null;
+        AxisAlignedBB bb = st.getCollisionBoundingBox(level, pos);
+        if (bb == Block.NULL_AABB) return null; // no collision: grass, flowers, water, torches, ...
+        if (bb == Block.FULL_BLOCK_AABB) return FULL; // the plain cube, by identity: the common case costs nothing more
+        boxList.clear();
+        // The mask only has to cover the block: every box of the block that intersects it is added (in world coordinates).
+        AxisAlignedBB mask = new AxisAlignedBB(x - 1.0, y - 1.0, z - 1.0, x + 2.0, y + 2.0, z + 2.0);
+        st.addCollisionBoxToList(level, pos, mask, boxList, null, false);
+        if (boxList.isEmpty()) return null;
+        double[][] boxes = new double[boxList.size()][];
+        for (int i = 0; i < boxes.length; i++) {
+            AxisAlignedBB b = boxList.get(i);
+            boxes[i] = new double[] {b.minX - x, b.minY - y, b.minZ - z, b.maxX - x, b.maxY - y, b.maxZ - z};
         }
         return boxes;
     }

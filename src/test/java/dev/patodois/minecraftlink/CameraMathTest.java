@@ -139,4 +139,17 @@ class CameraMathTest {
             }
         }
     }
+
+    @Test
+    void nearAndFarAreRecoveredFromAGluPerspectiveMatrix() {
+        // gluPerspective(70, 16/9, 0.05, 181.02): what Minecraft 1.12.2 loads for a render distance of 8 chunks (128 * sqrt 2)
+        float[] gl = arr(new Matrix4f().perspective((float) Math.toRadians(70), 16f / 9f, 0.05f, 181.02f, false));
+        double[] nf = CameraMath.glNearFar(gl);
+        assertEquals(0.05, nf[0], 1e-4);
+        assertEquals(181.02, nf[1], 0.2); // the matrix is float32: far is recovered to about 1e-3 relative
+        assertEquals(CameraMath.DEPTH_OPENGL, CameraMath.classify(gl, nf[0], nf[1]));
+        // an orthographic matrix (a GUI) is not a perspective one
+        float[] ortho = arr(new Matrix4f().ortho(0, 854, 480, 0, 1000, 3000, false));
+        assertTrue(Double.isNaN(CameraMath.glNearFar(ortho)[0]));
+    }
 }

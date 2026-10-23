@@ -1,0 +1,22 @@
+# runObfClient (the reobfuscated release jar) vs fake_guest --frames --in-front: peer log
+[guest   0.00s] connecting to 127.0.0.1:47854
+[guest   0.02s] connected: host "Minecraft Java 1.12.2", protocol v1, session 0x4b7ed63d
+[guest   0.02s] pixel file /var/folders/3j/xwr0chjs1wxghh4f209rllxw0000gn/T/rewrite-bridge-81348-guest-4b7ed63d-0.frames (320x240, depth: true, latency 40 ms)
+[guest   0.02s] cube placed 4 m ahead of the camera at [0.5, 5.62, 4.55]
+[guest   0.15s] collision query 1: 4596 triangles within 16 m of [0.5, 4.0, 0.5]
+[guest   0.15s] cube stands on the host's ground at y 4.00
+[guest   1.00s] got 59 cameras; sent 59 poses, 57 frames (render 0.1 ms each); focus with the host
+[guest   2.00s] got 60 cameras; sent 60 poses, 60 frames (render 0.1 ms each); focus with the host
+[guest   2.02s] asking the host for input focus
+[guest   3.00s] got 60 cameras; sent 60 poses, 60 frames (render 0.1 ms each); focus with the host
+[guest   4.00s] got 60 cameras; sent 60 poses, 60 frames (render 0.1 ms each); focus with the host
+[guest   5.00s] got 60 cameras; sent 60 poses, 60 frames (render 0.1 ms each); focus with the host
+[guest   5.24s] collision query 2: 4632 triangles within 16 m of [0.5, 4.0, 0.5]
+[guest   6.00s] got 60 cameras; sent 60 poses, 60 frames (render 0.1 ms each); focus with the host
+[guest   7.00s] got 60 cameras; sent 60 poses, 60 frames (render 0.1 ms each); focus with the host
+[guest   8.00s] got 60 cameras; sent 60 poses, 60 frames (render 0.1 ms each); focus with the host
+[guest   9.00s] got 60 cameras; sent 60 poses, 60 frames (render 0.1 ms each); focus with the host
+[guest  10.00s] got 60 cameras; sent 60 poses, 60 frames (render 0.2 ms each); focus with the host
+[guest  10.39s] collision query 3: 4632 triangles within 16 m of [0.5, 4.0, 0.5]
+[guest  11.00s] got 60 cameras; sent 60 poses, 60 frames (render 0.1 ms each); focus with the host
+[guest  11.89s] LOST the host: peer said bye: closing
