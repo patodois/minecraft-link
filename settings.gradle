@@ -6,6 +6,10 @@ pluginManagement {
 			name = 'Fabric'
 			url = 'https://maven.fabricmc.net/'
 		}
+		maven {
+			name = 'MinecraftForge'
+			url = 'https://maven.minecraftforge.net/'
+		}
 	}
 }
 
@@ -22,6 +26,7 @@ rootProject.name = 'minecraft-link'
 include('common')
 include('fabric')
 include('neoforge')
+include('forge')
 
 // The protocol library lives in its own repository next to this one; Gradle builds it from source
 // and each loader jar bundles it (Fabric jar-in-jar, NeoForge/Forge jarJar, see the loader build files).

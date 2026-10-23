@@ -1,0 +1,49 @@
+name: build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      # The protocol library is a Gradle composite build expected next to this repository (../link-java).
+      # Change the repository below to wherever link-java is published.
+      - uses: actions/checkout@v4
+        with:
+          path: minecraft-link
+      - uses: actions/checkout@v4
+        with:
+          repository: patodois/link-java
+          path: link-java
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          # the wrapper in the repository decides the Gradle version
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+      # Builds the Fabric (also used on Quilt), NeoForge and Forge jars and runs the 40 unit tests of the common module.
+      # ModDevGradle asks for a Java 21 toolchain for some of its tools; the foojay resolver in settings.gradle fetches it.
+      - name: Build all loaders and run the common tests
+        working-directory: minecraft-link
+        run: ./gradlew build --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jars-${{ matrix.os }}
+          path: |
+            minecraft-link/fabric/build/libs/minecraft-link-fabric-*[0-9].jar
+            minecraft-link/neoforge/build/libs/minecraft-link-neoforge-*[0-9].jar
+            minecraft-link/forge/build/libs/minecraft-link-forge-*[0-9].jar
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-reports-${{ matrix.os }}
+          path: minecraft-link/common/build/reports/tests

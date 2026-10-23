@@ -51,3 +51,18 @@ tasks.named('jar') {
 	from(rootProject.file('LICENSE-MIT')) { rename { "${it}_${projectName}" } }
 	from(rootProject.file('LICENSE-APACHE')) { rename { "${it}_${projectName}" } }
 }
+
+// Test clients must be silent: before every runClient write the master volume 0 into the run directory's options.txt
+// (created if missing, other lines kept). The accessibility onboarding screen of a first start is switched off too,
+// so scripted runs are not stuck on it.
+def prepareRunOptions = tasks.register('prepareRunOptions') {
+	def optionsFile = layout.projectDirectory.file('run/options.txt').asFile
+	doLast {
+		optionsFile.parentFile.mkdirs()
+		def lines = optionsFile.exists() ? optionsFile.readLines().findAll { !it.startsWith('soundCategory_master:') && !it.startsWith('onboardAccessibility:') } : []
+		lines.add('soundCategory_master:0.0')
+		lines.add('onboardAccessibility:false')
+		optionsFile.text = lines.join('\n') + '\n'
+	}
+}
+tasks.matching { it.name == 'runClient' }.configureEach { dependsOn prepareRunOptions }

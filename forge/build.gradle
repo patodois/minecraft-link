@@ -1,0 +1,68 @@
+plugins {
+	id 'net.minecraftforge.gradle'
+	id 'net.minecraftforge.jarjar'
+}
+apply from: rootProject.file('gradle/loader.gradle')
+
+minecraft {
+	runs {
+		configureEach {
+			workingDir = layout.projectDirectory.dir('run')
+			systemProperty 'eventbus.api.strictRuntimeChecks', 'true'
+		}
+
+		register('client') {
+			// Forge finds a mixin config through the jar's manifest; in the dev run there is no jar, so name it here.
+			args '--mixin.config=minecraft_link.mixins.json'
+			// The Mac has 16 GB shared with other builds: keep the game small.
+			jvmArgs '-Xmx2G'
+			// macOS: the window system must run on the first thread (Loom and ModDevGradle add this themselves; ForgeGradle does not).
+			if (System.getProperty('os.name').toLowerCase().contains('mac')) jvmArgs '-XstartOnFirstThread'
+			// The loader's launch profile passes -Djava.net.preferIPv6Addresses=system (see NeoForge's build file for why that matters here).
+			// ForgeGradle puts its own -D...=system first on the command line, so ours goes there as a JVM argument, after it.
+			jvmArgs '-Djava.net.preferIPv6Addresses=false'
+			// Scripted runs (see AutoTest): ./gradlew :forge:runClient -Pautotest=/path/script.txt -Pshots=/path/dir
+			if (project.hasProperty('autotest')) {
+				systemProperty 'minecraftlink.autotest', project.property('autotest')
+				systemProperty 'minecraftlink.shots', project.hasProperty('shots') ? project.property('shots') : 'run/shots'
+			}
+		}
+	}
+}
+
+repositories {
+	minecraft.mavenizer(it)
+	maven fg.forgeMaven
+	maven fg.minecraftLibsMaven
+	mavenCentral()
+	maven {
+		name = 'Fabric'
+		url = 'https://maven.fabricmc.net/'
+	}
+}
+
+jarJar.register()
+
+dependencies {
+	implementation minecraft.dependency("net.minecraftforge:forge:${rootProject.minecraft_version}-${rootProject.forge_version}")
+
+	// The passthrough link protocol (pure Java), built from ../link-java and bundled into the jar (jarJar).
+	implementation "dev.patodois:link-java:${rootProject.link_java_version}"
+	// A plain version here becomes the range [0.1.0,) in the jar's metadata.
+	jarJar "dev.patodois:link-java:${rootProject.link_java_version}"
+}
+
+// The jar that gets released is the one with link-java inside (jarJar task); name it like the other loaders' jars.
+tasks.named('jar') {
+	archiveClassifier = 'slim'
+}
+tasks.named('jarJar') {
+	archiveClassifier = null
+}
+
+// Forge finds the mixin config of a mod jar through this manifest attribute (the config itself is in common/src/main/resources).
+tasks.withType(Jar).configureEach {
+	manifest {
+		attributes 'MixinConfigs': 'minecraft_link.mixins.json'
+	}
+}

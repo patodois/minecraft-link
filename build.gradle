@@ -4,4 +4,7 @@ plugins {
 	id 'net.fabricmc.fabric-loom' version "${loom_version}" apply false
 	// https://projects.neoforged.net/neoforged/moddevgradle
 	id 'net.neoforged.moddev' version "${moddev_version}" apply false
+	// https://files.minecraftforge.net, https://github.com/MinecraftForge/MDKExamples
+	id 'net.minecraftforge.gradle' version "${forgegradle_version}" apply false
+	id 'net.minecraftforge.jarjar' version "${forge_jarjar_version}" apply false
 }
