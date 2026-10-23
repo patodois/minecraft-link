@@ -2,7 +2,7 @@
 
 **NOT AN OFFICIAL MINECRAFT PRODUCT. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT.**
 
-A client-side [Fabric](https://fabricmc.net) mod for Minecraft: Java Edition that speaks the
+A client-side mod for Minecraft: Java Edition on **Fabric** (and **Quilt**, with the same jar), **NeoForge** and **Forge** that speaks the
 **rewrite-bridge passthrough link protocol v1** (`docs/CONTRACT.md` in the `rewrite-bridge`
 repository, revision 3), so a running Minecraft can be a **host** or a **guest** next to any other
 game or rewrite that speaks it: the Rust tools, the Hytale plugin, anything else.
@@ -16,8 +16,17 @@ game or rewrite that speaks it: the Rust tools, the Hytale plugin, anything else
 The protocol implementation is [`link-java`](../link-java) (pure Java, tested against the Rust
 reference peers), bundled into the mod jar. Everything binds and connects to `127.0.0.1` only.
 
-Tested with Minecraft **26.3**, Fabric Loader **0.20.1**, Fabric API **0.165.0+26.3**, Fabric Loom
-**1.19.3**, Gradle 9.8.2, JDK 25.
+Tested with Minecraft **26.3**, JDK 25, Gradle 9.8.2 and, per loader:
+
+| Loader | Version | Build tooling |
+|---|---|---|
+| Fabric | Loader 0.20.1, Fabric API 0.165.0+26.3 | Fabric Loom 1.19.3 |
+| Quilt | Quilt Loader 0.31.0-beta.4 with the Fabric jar and Fabric API (no Quilted Fabric API exists for 26.x) | none: it runs the Fabric jar |
+| NeoForge | 26.3.0.95 | ModDevGradle 2.0.148 |
+| Forge | 66.1.0 | ForgeGradle 7.0.40, JarJar plugin 0.2.3 |
+
+One version number (`mod_version` in `gradle.properties`) goes into every jar. The jars are named
+`minecraft-link-<loader>-<version>.jar`.
 
 ## What this mod is not
 
@@ -49,7 +58,7 @@ process's memory.
 
 ## Use
 
-1. Build or install the jar (below) and start Minecraft with Fabric.
+1. Build or install the jar for your loader (below, and "Try it") and start Minecraft with it.
 2. Join a world (singleplayer or a server; the mod is client-side only and reads only what your client
    already knows).
 3. `/link host` (the other game connects to you) or `/link guest` (you connect to the other game's host).
@@ -66,7 +75,55 @@ process's memory.
 Leaving the world and quitting the game close the link the same way (`despawn` for a guest, then
 `bye`, then the half-close of CONTRACT 6.1).
 
-### `config/minecraft-link.json`
+## Try it
+
+Build the jars once (`./gradlew build`, see "Build and test"); they are in `<loader>/build/libs/`.
+
+| Instance runs | Drop this jar into the instance's `mods` folder | Also needed |
+|---|---|---|
+| Fabric | `fabric/build/libs/minecraft-link-fabric-0.1.0.jar` | [Fabric API](https://modrinth.com/mod/fabric-api) for 26.3 |
+| Quilt | the same Fabric jar | the Fabric API jar (Quilted Fabric API has no 26.x release) |
+| NeoForge | `neoforge/build/libs/minecraft-link-neoforge-0.1.0.jar` | nothing |
+| Forge | `forge/build/libs/minecraft-link-forge-0.1.0.jar` | nothing |
+
+In [Prism Launcher](https://prismlauncher.org): create an instance (Add Instance, version 26.3, pick the loader in the
+right-hand list), select it, **Edit**, **Mods**, **Download mods** or **Add file**, and add the jar (and Fabric API on
+Fabric and Quilt); or right-click the instance, **Folder**, **Minecraft Folder**, and drop the jars into `mods`. Start it with an
+account, or offline for a test.
+
+**NeoForge and Forge only:** the loaders start the game with `-Djava.net.preferIPv6Addresses=system`, which makes Java's loopback
+address `::1`, but the protocol (and the other programs) use 127.0.0.1. Until link-java binds 127.0.0.1 explicitly, add
+`-Djava.net.preferIPv6Addresses=false` under **Edit**, **Settings**, **Java**, **Java arguments**. The mod says so in
+`/link host`'s answer when it sees an IPv6 loopback address.
+
+Then, to see the occlusion:
+
+1. Create a creative **Superflat** world (cheats on) and stand still, looking along a flat stretch of ground.
+2. Run `/link host` (it listens on 127.0.0.1:47800).
+3. In a terminal, start the Rust reference guest from `rewrite-bridge`; it puts a cube 4 m ahead of where you look, on the ground
+   you stand on (the collision snapshot says where that is):
+
+   ```sh
+   ~/rewrite-bridge/target/release/examples/fake_guest --frames --in-front
+   # or: cargo run --release --features link --example fake_guest -- --frames --in-front
+   ```
+4. The cube appears. Put a wall between you and it, slightly to one side of the line of sight, for example with the player at
+   `x 0.0` looking north (`/tp @s 0.0 -60 0.0 180 0` in a default Superflat), a stone wall two blocks in front of you:
+
+   ```
+   /fill 0 -60 -2 2 -59 -2 minecraft:stone
+   ```
+
+   (use your own ground height instead of -60; the wall starts at the line of sight and extends to the right). The part of the
+   cube behind the wall disappears; `/fill 0 -60 -2 2 -59 -2 minecraft:air` brings it back.
+5. `/link status` shows the counters, `/link stop` ends the session.
+
+For the other direction run `fake_host` (`... --example fake_host -- --port 47831`) and `/link guest 47831` in the game: the host
+prints the player's poses.
+
+`autotest/host_wall.txt` and `autotest/guest.txt` are the scripted versions of both (see "Scripted client runs").
+
+## `config/minecraft-link.json`
 
 Written with the defaults on first start. Unknown keys are ignored.
 
@@ -181,27 +238,68 @@ is shown, not roll. While a guest's frames are on screen the placeholder is hidd
 - **Input focus**: while the other side holds the focus, `LocalPlayer.input` is replaced by an empty `ClientInput` (no keys pressed) and put back when the
   focus returns or the session ends. Movement keys, jump and sneak are handed over; mouse look, chat and the inventory stay with Minecraft.
 
-### The one mixin (`GameRendererMixin`)
+## Structure: common plus one thin module per loader
 
-Two read-only injections into `GameRenderer`, nothing modified: `extract` at its head (place the guest entities for this frame, at frame rate
+```
+common/     all logic that touches no loader API (vanilla classes, Mojang names), the mixins, the shader
+fabric/     entry point, events, commands glue; jar-in-jar for link-java.  The same jar runs on Quilt.
+neoforge/   entry point, events, commands glue; jarJar for link-java
+forge/      entry point, events, commands glue; jarJar for link-java
+autotest/   scripts for the scripted client runs
+```
+
+The layout follows the MultiLoader-Template (CC0, by Jared; its 26.3 branch is where the `common` project on ModDevGradle's vanilla
+mode and the loader modules that compile the common sources into their own jars come from). Architectury Loom 1.17
+(July 2026) mentions 26.x in its release notes, but it would have to drive all three loaders through one plugin; the official
+toolchain of each loader (Loom, ModDevGradle, ForgeGradle 7) is what each team tests for 26.3, so the project uses those, and
+ForgeGradle, which the template does not cover, was added by hand.
+
+Minecraft 26.x ships unobfuscated, so there are no mappings and no remapping: the same source compiles on all three
+toolchains against the same names. The `common` module compiles against vanilla only (ModDevGradle with NeoForm 26.3-1); each
+loader module adds `common/src/main` to its own source set. What the loader modules contain:
+
+| | Fabric (and Quilt) | NeoForge | Forge |
+|---|---|---|---|
+| Entry point | `ClientModInitializer` | `@Mod(dist = CLIENT)` | `@Mod`, returns early on a server |
+| `/link` commands | `ClientCommandRegistrationCallback` | `RegisterClientCommandsEvent` | `RegisterClientCommandsEvent` |
+| Client tick | `END_CLIENT_TICK` | `ClientTickEvent.Post` | `TickEvent.ClientTickEvent.Post` |
+| Camera sample and guest frame | `LevelRenderEvents.START_MAIN` and `END_MAIN` | `RenderLevelStageEvent.AfterLevel` (both, in that order) | a frame-graph pass from `AddFramePassEvent`: samples while the graph is built, draws when it executes |
+| Game exit | `CLIENT_STOPPING` | `GameShuttingDownEvent` | `GameShuttingDownEvent` |
+| Leaving a world | common code notices `level == null` on the tick | same | same |
+| Config file | `FabricLoader.getConfigDir()` | `FMLPaths.CONFIGDIR` | `FMLPaths.CONFIGDIR` |
+| link-java | jar-in-jar (`include`) | `jarJar` | `jarJar` plugin |
+| Mixin config | `fabric.mod.json` | `[[mixins]]` in `neoforge.mods.toml` | `MixinConfigs` in the jar manifest (and `--mixin.config` in the dev run) |
+
+### The mixins (`common/.../mixin`)
+
+All three are in the common module and the same on every loader. `GameRendererMixin` has two read-only injections into
+`GameRenderer`, nothing modified: `extract` at its head (place the guest entities for this frame, at frame rate
 rather than the 20 Hz tick, and upload the guest texture while no render pass is open), and `renderLevel` just before the projection
 matrix is handed to the renderer (copy the matrix that includes view bobbing; Minecraft computes it in a local variable and has no getter for it).
-Everything else uses Fabric API events (`LevelRenderEvents`, `ClientTickEvents`, client commands).
+`DisplayAccess` and `BlockDisplayAccess` are invokers for three private setters of the display entities (Fabric API
+used to widen them; NeoForge and Forge do not). Everything else uses each loader's own events (table above).
+
+The mixin config says `compatibilityLevel` JAVA_21, not JAVA_25: Forge's Mixin 0.8.7 does not know JAVA_25 and rejects the file.
 
 ## Build and test
 
 ```sh
 export JAVA_HOME=/opt/homebrew/opt/openjdk@25     # Minecraft 26.3 needs Java 25
-./gradlew build --no-daemon                       # build/libs/minecraft-link-0.1.0.jar (link-java jar-in-jar), runs the tests
-./gradlew test --no-daemon                        # 40 unit tests
-./gradlew runClient --no-daemon                   # the real client with an offline dev account (-Xmx2G)
+./gradlew build --no-daemon                       # all loaders: <loader>/build/libs/minecraft-link-<loader>-0.1.0.jar, and the tests
+./gradlew :common:test --no-daemon                # the 40 unit tests only
+./gradlew :fabric:runClient --no-daemon           # the real client with an offline dev account (-Xmx2G); also :neoforge: and :forge:
 ```
 
-`link-java` is expected next to this repository (`../link-java`, a Gradle composite build); `gradle.properties` keeps the Gradle JVM at 1 GB
-and the daemon off. Loom downloads the game and its libraries into `~/.gradle` and `.gradle/loom-cache`;
-nothing of that is committed.
+`link-java` is expected next to this repository (`../link-java`, a Gradle composite build; `-PlinkJavaDir=<path>` points at another
+checkout); `gradle.properties` keeps the Gradle JVM at 1 GB and the daemon off. The loaders download the game and their libraries
+into `~/.gradle` (a few GB for all three); nothing of that is committed. ModDevGradle runs some tools on Java 21; the foojay
+toolchain resolver in `settings.gradle` fetches one when the machine has none. Before every `runClient` the build writes master volume 0 into
+the run directory's `options.txt` (test clients are silent) and switches the first-start accessibility screen off.
 
-Unit tests (JUnit 5): the coordinate mapping, camera matrix conversion (view, bobbing, the four depth conventions, rewriting, linear depth),
+The Fabric jar has to be built with `./gradlew :fabric:build`; the Forge build also leaves a `-slim` jar without link-java, do not use it.
+GitHub Actions (`.github/workflows/build.yml`) builds everything on Linux and macOS and runs the tests.
+
+Unit tests (JUnit 5, in `common`): the coordinate mapping, camera matrix conversion (view, bobbing, the four depth conventions, rewriting, linear depth),
 collision triangles for a full block, a slab and stairs, **both from hand-written boxes and from Minecraft's own block shapes**
 (the registries are bootstrapped; no window needed), pose interpolation, reprojection, the camera ring and the settings file.
 
@@ -211,26 +309,35 @@ collision triangles for a full block, a slab and stairs, **both from hand-writte
 run commands, press keys, take screenshots) from a plain script, so the mod can be tested without a person:
 
 ```sh
-./gradlew runClient --no-daemon -Pautotest=/path/script.txt -Pshots=/path/screenshots
+./gradlew :fabric:runClient --no-daemon -Pautotest=/path/script.txt -Pshots=/path/screenshots   # or :neoforge: / :forge:
 ```
 
 Script lines: `create_world`, `wait_world`, `wait N` (ticks), `cmd /command`, `link host|guest|stop|status|focus ...`, `key forward down|up`,
-`look yaw pitch`, `pos`, `shot name`, `leave`, `quit`, `log text`. It uses only the game's own screens and commands.
+`look yaw pitch`, `hud on|off`, `pos`, `shot name`, `leave`, `quit`, `log text`. It uses only the game's own screens and commands.
 
 ### Test results (this machine, Minecraft 26.3 on macOS, OpenGL, Apple GPU)
 
-All against the Rust reference peers of `rewrite-bridge` (main, `93acfa2`) and `link-java`'s `LinkDemo`:
+All with the dev client of each loader (`runClient`, offline account, flat world, `-Xmx2G`) driven by `autotest/*.txt` against the Rust reference
+peers of `rewrite-bridge` (`fake_guest --frames --in-front`, `fake_host`):
 
-| Test | Result |
-|---|---|
-| Host vs Rust `fake_guest` | connected, entity spawned, the cube's pose is shown as a block at the right place and stays there while the player walks (screenshots) |
-| Host vs Rust `fake_guest --frames` (colour + depth) | the guest's cube is drawn in the world at the right place, correctly lit faces and perspective when the player moves, and **hidden behind a stone wall placed in front of it** (screenshots) |
-| Guest vs Rust `fake_host` | host logs the player's pose moving from z 0.5 to 9.13 as the script walks; while the host holds the input focus the movement keys did nothing, after the host granted it they moved the player, and the host took it back |
-| Host vs `LinkDemo guest --orbit` (Java to Java) | connected, entity circles the camera, 7,000-triangle collision snapshots received |
-| Leave world / quit game with a link up | the peer logs "peer said bye: closing" (and `despawn` first for the guest) |
+| Loader | Host vs `fake_guest --frames --in-front` | Guest vs `fake_host` |
+|---|---|---|
+| Fabric 0.20.1 | connected, cube drawn 4 m ahead, **right half hidden by a stone wall**; ~500 frames drawn | host logs the poses, z 0.5 to 9.13; movement ignored until the host gave the focus |
+| Quilt Loader 0.31.0-beta.4 (Fabric jar, Fabric API jar) | the same, cube hidden by the wall; ~570 frames drawn | not run |
+| NeoForge 26.3.0.95 | the same, ~570 frames drawn | the same poses and focus changes |
+| Forge 66.1.0 | the same, ~490 frames drawn | the same poses and focus changes |
+
+Earlier runs of the Fabric-only version (Java peer, leaving the world, quitting the game with a link up) are in `docs/test-logs/`; the
+single-loader code paths they covered are unchanged and live in `common`.
 
 ## Known limits
 
+- Fabric and Quilt use the same jar; Quilt needs Fabric API itself because no Quilted Fabric API exists for 26.x. The mod's metadata accepts
+  Fabric Loader from 0.19.5 (what Quilt Loader 0.31.0-beta.4 provides).
+- link-java binds to `InetAddress.getLoopbackAddress()`, which is `::1` on a JVM started with `-Djava.net.preferIPv6Addresses=system`
+  (NeoForge's and Forge's launch profiles and dev runs do that); see "Try it" for the workaround.
+- The NeoForge and Forge jars were tested through their dev clients (link-java on the class path); starting the built jars with link-java
+  from the jar-in-jar metadata in a real instance has not been tried yet.
 - Only tested on macOS with Minecraft's OpenGL backend. The Vulkan backend and Windows/Linux are not tested;
   the shader assumes the screen quad's `texCoord.y` is 0 at the bottom (how Minecraft's own blit shaders treat it).
 - Guest entities are a placeholder block (no roll, no model); the guest's own frames are what shows the real model.

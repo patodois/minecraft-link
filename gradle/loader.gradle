@@ -37,7 +37,7 @@ tasks.named('processResources') {
 		mod_id      : rootProject.mod_id,
 		mod_name    : rootProject.mod_name,
 		minecraft_version: rootProject.minecraft_version,
-		loader_version: rootProject.hasProperty('loader_version') ? rootProject.loader_version : '',
+		loader_min_version: rootProject.loader_min_version,
 		neoforge_version: rootProject.hasProperty('neoforge_version') ? rootProject.neoforge_version : '',
 	]
 	inputs.properties props
