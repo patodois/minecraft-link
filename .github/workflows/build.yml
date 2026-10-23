@@ -29,7 +29,7 @@ jobs:
         with:
           # the wrapper in the repository decides the Gradle version
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
-      # Builds the Fabric (also used on Quilt), NeoForge and Forge jars and runs the 40 unit tests of the common module.
+      # Builds the Fabric (also used on Quilt), NeoForge and Forge jars and runs the 48 unit tests of the common module.
       # ModDevGradle asks for a Java 21 toolchain for some of its tools; the foojay resolver in settings.gradle fetches it.
       - name: Build all loaders and run the common tests
         working-directory: minecraft-link

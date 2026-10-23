@@ -28,7 +28,7 @@ include('fabric')
 include('neoforge')
 include('forge')
 
-// The protocol library lives in its own repository next to this one; Gradle builds it from source
+// The protocol library (https://github.com/patodois/link-java) lives in its own repository next to this one; Gradle builds it from source
 // and each loader jar bundles it (Fabric jar-in-jar, NeoForge/Forge jarJar, see the loader build files).
 // -PlinkJavaDir=<path> points at another checkout (for example a clean one while ../link-java has uncommitted work).
 includeBuild(settings.providers.gradleProperty('linkJavaDir').getOrElse('../link-java'))

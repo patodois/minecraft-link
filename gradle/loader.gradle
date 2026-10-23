@@ -1,5 +1,5 @@
 // Shared by the loader modules (fabric, neoforge, forge): they compile the common sources and resources into
-// their own jar, name it minecraft-link-<loader>-<version>.jar, and carry the licences.
+// their own jar, name it minecraft-link-<loader>-<minecraft version>-<mod version>.jar, and carry the licences.
 
 apply plugin: 'java'
 
@@ -9,7 +9,9 @@ version = rootProject.mod_version
 group = rootProject.maven_group
 
 base {
-	archivesName = "${rootProject.archives_base_name}-${project.name}"
+	// The Minecraft version is in the name, so the jars of two Minecraft versions never share a file name:
+	// minecraft-link-fabric-26.3-0.1.0.jar
+	archivesName = "${rootProject.archives_base_name}-${project.name}-${rootProject.minecraft_version}"
 }
 
 sourceSets.main {
