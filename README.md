@@ -4,7 +4,7 @@
 
 A client-side mod for Minecraft: Java Edition **1.20.1** on **Fabric**, **Forge** and **NeoForge** (the 1.20.1 fork, 47.1.x) that speaks the
 **rewrite-bridge passthrough link protocol v1** (`docs/CONTRACT.md` in the `rewrite-bridge`
-repository, revision 3), so a running Minecraft can be a **host** or a **guest** next to any other
+repository, revision 4), so a running Minecraft can be a **host** or a **guest** next to any other
 game or rewrite that speaks it: the Rust tools, the Hytale plugin, anything else.
 
 This is the Minecraft 1.20.1 branch (`mc/1.20.1`) of the multi-loader layout of the 26.3 mod: the same `common` / `fabric` / `forge` / `neoforge`
@@ -16,11 +16,11 @@ modules, retargeted to 1.20.1 (OpenGL 3.2 core, Mojang's own `RenderSystem` and 
 - **Guest** (Minecraft publishes its player): `spawn`s your player and sends its pose every tick, and
   hands the movement keys over when the host holds the input focus.
 
-The protocol implementation is [`link-java`](../link-java) (pure Java, Java 8 bytecode, tested against the Rust
-reference peers), bundled into the mod jar. Everything binds and connects to `127.0.0.1` only (link-java does that itself, whatever
+The protocol implementation is [`link-java`](https://github.com/patodois/link-java) (pure Java, Java 8 bytecode, tested against the Rust
+reference peers, which are in [`rewrite-bridge`](https://github.com/patodois/rewrite-bridge)), bundled into the mod jar. Everything binds and connects to `127.0.0.1` only (link-java does that itself, whatever
 `java.net.preferIPv6Addresses` says).
 
-Tested with Minecraft **1.20.1**, Gradle 8.14.3 (on JDK 21), Java 17 for the game and, per loader:
+Tested with Minecraft **1.20.1**, Gradle 8.14.3 (on JDK 21 or 25, see "Which JDK"), Java 17 for the game and, per loader:
 
 | Loader | Version | Build tooling |
 |---|---|---|
@@ -28,8 +28,8 @@ Tested with Minecraft **1.20.1**, Gradle 8.14.3 (on JDK 21), Java 17 for the gam
 | Forge | 47.4.28 (the latest and recommended 1.20.1 build) | ForgeGradle 6.0.54 |
 | NeoForge | 47.1.106 (1.20.1) | ModDevGradle legacy 2.0.148 |
 
-One version number (`mod_version` in `gradle.properties`) goes into every jar. The jars are named
-`minecraft-link-<loader>-<version>.jar`. Quilt was not tried on 1.20.1.
+One version number (`mod_version` in `gradle.properties`) goes into every jar. The jars carry the Minecraft version in their name:
+`minecraft-link-<loader>-<minecraft version>-<version>.jar`, for example `minecraft-link-forge-1.20.1-0.1.0.jar`. Quilt was not tried on 1.20.1.
 
 ## What this mod is not
 
@@ -59,6 +59,11 @@ This mod only connects to other programs on your own machine and sends nothing t
 only guest content it draws is what the guest's own program renders. It does not read or change another
 process's memory.
 
+## Other Minecraft versions
+
+This branch is Minecraft 1.20.1 only. The mod for 26.3 (`main`), 1.12.2 (`mc/1.12.2`) and 1.7.10 (`mc/1.7.10`) have their own branches, and 1.2.5 is coming:
+see the table in the [main README](https://github.com/patodois/minecraft-link#minecraft-versions-branches-and-loaders).
+
 ## Use
 
 1. Build or install the jar for your loader (below, and "Try it") and start Minecraft 1.20.1 with it.
@@ -84,39 +89,44 @@ Build the jars once (`./gradlew build`, see "Build and test"); they are in `<loa
 
 | Instance runs | Drop this jar into the instance's `mods` folder | Also needed |
 |---|---|---|
-| Fabric | `fabric/build/libs/minecraft-link-fabric-0.1.0.jar` | [Fabric API](https://modrinth.com/mod/fabric-api) for 1.20.1 (0.92.x) |
-| Forge | `forge/build/libs/minecraft-link-forge-0.1.0.jar` | nothing |
-| NeoForge | `neoforge/build/libs/minecraft-link-neoforge-0.1.0.jar` | nothing |
+| Fabric | `fabric/build/libs/minecraft-link-fabric-1.20.1-0.1.0.jar` | [Fabric API](https://modrinth.com/mod/fabric-api) for 1.20.1 (0.92.x) |
+| Forge | `forge/build/libs/minecraft-link-forge-1.20.1-0.1.0.jar` | nothing |
+| NeoForge | `neoforge/build/libs/minecraft-link-neoforge-1.20.1-0.1.0.jar` | nothing |
 
-The Forge build also leaves a `minecraft-link-forge-0.1.0-slim.jar` without link-java: do not use that one.
+Use exactly these jars, the ones without a suffix: not `-dev`, not `-sources`, and not the `-slim` jar that the Forge build also leaves (it has no link-java inside).
 
 **Prism Launcher** ([prismlauncher.org](https://prismlauncher.org)), Forge:
 
 1. **Add Instance**, pick **Minecraft 1.20.1**, then **Forge** in the loader list on the right and the 47.4.28 build (or any 47.x), **OK**.
 2. Select the instance, **Edit**, **Mods**, **Add file** (or right-click the instance, **Folder**, **Minecraft Folder**, and drop the jar into `mods`),
-   and add `minecraft-link-forge-0.1.0.jar`.
+   and add `minecraft-link-forge-1.20.1-0.1.0.jar`.
 3. Start it with an account, or offline for a test. Prism picks Java 17 for 1.20.1 by itself.
 
 **Prism Launcher**, Fabric:
 
 1. **Add Instance**, **Minecraft 1.20.1**, loader **Fabric** (Loader 0.14.21 or newer), **OK**.
 2. **Edit**, **Mods**, **Download mods** (Modrinth) and search for **Fabric API**, pick the 0.92.x build for 1.20.1, or add the jar by hand; then
-   **Add file** and add `minecraft-link-fabric-0.1.0.jar`.
+   **Add file** and add `minecraft-link-fabric-1.20.1-0.1.0.jar`.
 3. Start it.
 
-NeoForge 1.20.1 (47.1.x) works the same way with `minecraft-link-neoforge-0.1.0.jar`, if your Prism Launcher offers NeoForge for 1.20.1 (it was tested with
+NeoForge 1.20.1 (47.1.x) works the same way with `minecraft-link-neoforge-1.20.1-0.1.0.jar`, if your Prism Launcher offers NeoForge for 1.20.1 (it was tested with
 NeoForge's own installer, not through Prism).
 
 Then, to see the occlusion:
 
 1. Create a creative **Superflat** world (cheats on) and stand still, looking along a flat stretch of ground (its ground is at y = -60).
 2. Run `/link host` (it listens on 127.0.0.1:47800).
-3. In a terminal, start the Rust reference guest from `rewrite-bridge`; it puts a cube 4 m ahead of where you look, on the ground
+3. In a terminal, get and build the Rust reference peers once (they need a [Rust toolchain](https://rustup.rs)):
+
+   ```sh
+   git clone https://github.com/patodois/rewrite-bridge && cd rewrite-bridge && cargo build --release --features link --examples
+   ```
+
+   then start the reference guest from that directory; it puts a cube 4 m ahead of where you look, on the ground
    you stand on (the collision snapshot says where that is):
 
    ```sh
-   ~/rewrite-bridge/target/release/examples/fake_guest --frames --in-front
-   # or: cargo run --release --features link --example fake_guest -- --frames --in-front
+   target/release/examples/fake_guest --frames --in-front
    ```
 4. The cube appears. Put a wall between you and it, slightly to one side of the line of sight, for example with the player at
    `x 0.0` looking north (`/tp @s 0.0 -60 7.5 180 0` in a default Superflat), a stone wall two blocks in front of you:
@@ -129,7 +139,7 @@ Then, to see the occlusion:
    cube behind the wall disappears; `/fill 0 -60 5 2 -59 5 minecraft:air` brings it back.
 5. `/link status` shows the counters, `/link stop` ends the session.
 
-For the other direction run `fake_host` (`... --example fake_host -- --port 47831`) and `/link guest 47831` in the game: the host
+For the other direction run `target/release/examples/fake_host --port 47831` (same directory) and `/link guest 47831` in the game: the host
 prints the player's poses.
 
 `autotest/host_wall.txt` and `autotest/guest.txt` are the scripted versions of both (see "Scripted client runs").
@@ -232,7 +242,7 @@ is shown, not roll. While a guest's frames are on screen the placeholder is hidd
 
 1. `frame_channel` names the pixel file; the frame worker maps it read-only (`PixelFile.Reader` in
    link-java: all header and depth checks of the contract, the seqlock, an unknown `depth_format` read as colour only).
-2. On each `Frame` it copies the slot, looks `camera_seq` up in a ring of the last 64 cameras sent and reprojects the
+2. On each `Frame` it copies the slot, looks `camera_seq` up in a ring of the last 256 cameras sent (a second at 240 fps; the contract asks for half a second) and reprojects the
    frame (colour and linear depth in metres) from that camera to the one being presented now (`Reproject`, on a helper thread).
 3. At the end of the level render the render thread uploads the result to an RGBA8 and an R32F texture and draws one fullscreen
    triangle into the main render target with a GLSL 150 program of its own (`assets/minecraft_link/shaders/core/link_frame.vsh` and `.fsh`).
@@ -297,25 +307,38 @@ mapping-remapping setup that Mixin needs on an obfuscated runtime.
 
 ## Build and test
 
+You need git and a JDK ("Which JDK" below), and `link-java` next to this repository (the build includes it as a Gradle composite build;
+it is not downloaded from anywhere else):
+
 ```sh
-export JAVA_HOME=<a JDK 21 to 24>                  # Gradle 8.14.3 runs on JDK 17 to 24 and Loom 1.13 wants 21 or newer to run on
-./gradlew build --no-daemon                        # all loaders: <loader>/build/libs/minecraft-link-<loader>-0.1.0.jar, and the tests
-./gradlew :common:test --no-daemon                 # the 43 unit tests only
-./gradlew :fabric:runClient --no-daemon            # the real client with an offline dev account (-Xmx2G, Java 17); also :forge: and :neoforge:
+git clone https://github.com/patodois/link-java            # the protocol library, a sibling directory of minecraft-link
+git clone -b mc/1.20.1 https://github.com/patodois/minecraft-link
+cd minecraft-link
+export JAVA_HOME=/opt/homebrew/opt/openjdk@25              # or any JDK 21 or newer; see "Which JDK"
+./gradlew build --no-daemon                                # all loaders: <loader>/build/libs/minecraft-link-<loader>-1.20.1-0.1.0.jar, and the tests
+./gradlew :common:test --no-daemon                         # the 51 unit tests only
+./gradlew :fabric:runClient --no-daemon                    # the real client with an offline dev account (-Xmx2G, Java 17); also :forge: and :neoforge:
 ```
 
-Gradle 8.14.3, not the 9.x of the 26.3 mod: ForgeGradle 6 is built for Gradle 8, and Loom 1.13.6 is the newest Loom that still runs on it (Loom 1.14 and
-later need Gradle 9). The game and the mod are Java 17, compiled and run through Gradle's toolchain (the foojay resolver in `settings.gradle` fetches a
-JDK 17 when the machine has none).
+### Which JDK
 
-`link-java` is expected next to this repository (`../link-java`, a Gradle composite build; `-PlinkJavaDir=<path>` points at another
-checkout); `gradle.properties` keeps the Gradle JVM at 1 GB and the daemon off. The loaders download the game and their libraries
+One rule: **run Gradle with a JDK 21 or newer.** The game and the mod are Java 17, but you do not install that: Gradle's toolchain resolver
+(`settings.gradle`) downloads a JDK 17 when the machine has none. Loom 1.13 needs a JVM of 21 or newer to run on, and Gradle 8.14.3 is the
+version this branch needs (ForgeGradle 6 is built for Gradle 8; Gradle 8.14 officially lists JDK 24 as its newest, and 25 worked).
+
+Verified here: the whole build, the unit tests and the jars with Temurin 21.0.12 and with Homebrew `openjdk@25` 25.0.5 (the same on the 26.3 branch
+needs 25; see its README). The dev-client and real-profile runs recorded below were made with Gradle on JDK 21. Not tried: JDK 17 and JDK 26 or newer.
+
+Gradle 8.14.3, not the 9.x of the 26.3 mod: ForgeGradle 6 is built for Gradle 8, and Loom 1.13.6 is the newest Loom that still runs on it (Loom 1.14 and
+later need Gradle 9).
+
+`-PlinkJavaDir=<path>` points the build at another `link-java` checkout than `../link-java`; `gradle.properties` keeps the Gradle JVM at 1 GB and the daemon off. The loaders download the game and their libraries
 into `~/.gradle` (about 2.5 GB for the three of them); nothing of that is committed. Before every `runClient` the build writes master volume 0 into
 the run directory's `options.txt` (test clients are silent) and switches off the first-start accessibility screen, the pause menu that
 appears when the window is not focused, and the tutorial hints.
 
-The Fabric jar has to be built with `./gradlew :fabric:build` (`remapJar` makes the Intermediary-named release jar; the `-dev` jar is not for players).
-The Forge build also leaves a `-slim` jar without link-java, do not use it. Forge and NeoForge jars are reobfuscated to SRG names by `reobfJarJar` and
+The Fabric jar has to be built with `./gradlew :fabric:build` (`remapJar` makes the Intermediary-named release jar; do not use the `-dev` jar).
+Forge and NeoForge jars are reobfuscated to SRG names by `reobfJarJar` and
 `reobfJar`. GitHub Actions (`.github/workflows/build.yml`) builds everything on Linux and macOS and runs the tests (not run from this branch yet).
 
 Unit tests (JUnit 5, in `common`): the coordinate mapping, camera matrix conversion (the view rotation against a real `PoseStack`, bobbing and
@@ -368,12 +391,35 @@ Earlier runs of the 26.3 mod (Java peer, leaving the world, quitting the game wi
   the level render, so what a mod does to that target before the hand is drawn decides how it looks.
 - The camera is built from Minecraft's yaw, pitch and position and the projection it drew with. A camera roll added by another mod (Forge's `ViewportEvent.ComputeCameraAngles`) is not in it.
 - Guest entities are a placeholder block (no roll, no model); the guest's own frames are what shows the real model.
-- Reprojection is on the CPU and meant for guest images of a few hundred thousand pixels; cracks can appear on stretched surfaces.
+- Reprojection is on the CPU and meant for guest images of a few hundred thousand pixels; cracks can appear on stretched surfaces. A pixel
+  file of more than 4 Mpixels (2560 x 1600) is refused with a note in `/link status`, although the contract allows 2^26 pixels.
+- Guest frames that stop arriving are cleared after a second and the placeholder block comes back; the textures are released when the link stops.
 - Block changes are found by rescanning (every 0.5 s by default), not by an event.
 - Mouse and keyboard other than movement stay with Minecraft when the focus is elsewhere.
 - No server-side component: it is a client mod; entities it shows exist only in your client.
 - Frames are drawn at the end of the level render; the first-person hand, the GUI and the HUD are drawn afterwards, so they cover the guest's frame.
 - `/link host` no longer warns about an IPv6 loopback address: link-java binds and connects to 127.0.0.1 explicitly, whatever `java.net.preferIPv6Addresses` says.
+
+## Glossary
+
+| Term | Meaning here |
+|---|---|
+| **host**, **guest** | The two roles of the link. The host is the game you are playing; the guest is a second game or rewrite that adds entities, poses and rendered frames to the host's world. Minecraft can be either. |
+| **link**, **rewrite-bridge**, **CONTRACT** | The protocol between the two programs (TCP for control, UDP for state, a shared file for pixels) and the repository that defines it. `docs/CONTRACT.md` there is the whole specification. |
+| **link-java** | The Java implementation of that protocol, used by this mod. |
+| **pose** | An entity's position, rotation, scale and velocity at a moment, sent every tick. |
+| **link metre** | The unit of the link's shared space. `scale` in the config says how many link metres one block is (default 1). |
+| **`depth_range`** | A field of the camera message that says how the projection stores depth (0 OpenGL, 1 zero-to-one, 2 reversed). |
+| **Fabric, Forge, NeoForge** | The mod loaders: programs that start Minecraft with mods. NeoForge 47.1.x is the fork of Forge 47 that still runs 1.20.1. |
+| **Loom, ModDevGradle, ForgeGradle** | The Gradle plugins of Fabric, NeoForge and Forge. They download Minecraft, make it compilable and give a `runClient` task. |
+| **Gradle, toolchain** | The build tool, and its way of finding (or downloading) the JDK a project asks for, independent of the JDK Gradle itself runs on. |
+| **composite build** | A Gradle build that includes another project's source (here `link-java`) instead of a published artifact. |
+| **jar-in-jar (`jarJar`)** | A mod jar that carries another jar inside it; the loader unpacks it at start. This is how `link-java` ships inside every loader's jar. |
+| **Mixin** | A library that lets a mod change a method of Minecraft's classes at load time. This branch needs none. |
+| **Intermediary, SRG, `reobf`** | The obfuscated names Fabric and Forge use when 1.20.1 runs. The source uses Mojang's names; the build renames the finished jar. |
+| **dev client, `runClient`** | The Minecraft client started from the build with the mod on the class path, with an offline account, for testing. |
+| **Superflat** | A world type with flat ground. In 1.20.1 the ground is at y = -60 (a Rust guest's ground is y = 0, hence `"offset": [0, 60, 0]` in the config). |
+| **`26.3`** | Mojang's version number since 2026: the year (26) and the number of the release in that year (3). The `main` branch is the mod for it. |
 
 ## License
 
