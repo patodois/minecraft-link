@@ -118,6 +118,14 @@ public final class CameraMath {
         return mul(mcView, inv);
     }
 
+    /** Where the camera of a world-to-view matrix is (the point it maps to the origin): {@code -R^T t}. */
+    public static double[] cameraPosition(float[] view) {
+        double t0 = view[12], t1 = view[13], t2 = view[14];
+        double[] p = new double[3];
+        for (int i = 0; i < 3; i++) p[i] = -(view[i * 4] * t0 + view[i * 4 + 1] * t1 + view[i * 4 + 2] * t2);
+        return p;
+    }
+
     /**
      * Folds the bobbing transform into the view. Minecraft draws the level with
      * {@code cleanProjection * bob}; the contract wants a separate view and projection, so with
@@ -186,7 +194,40 @@ public final class CameraMath {
     }
 
     /** A projection to send, its contract {@code depth_range} code and whether it was rewritten. */
-    public record Projection(float[] matrix, int depthRange, boolean rewritten) {}
+    public static final class Projection {
+        private final float[] matrix;
+        private final int depthRange;
+        private final boolean rewritten;
+
+        public Projection(float[] matrix, int depthRange, boolean rewritten) {
+            this.matrix = matrix;
+            this.depthRange = depthRange;
+            this.rewritten = rewritten;
+        }
+
+        public float[] matrix() {
+            return matrix;
+        }
+
+        public int depthRange() {
+            return depthRange;
+        }
+
+        public boolean rewritten() {
+            return rewritten;
+        }
+    }
+
+    /**
+     * Near and far distance of a standard OpenGL perspective matrix ({@code gluPerspective}: {@code m[10] = -(f + n) / (f - n)},
+     * {@code m[14] = -2 f n / (f - n)}), as {@code {near, far}}; {@code {NaN, NaN}} when the matrix is not one.
+     */
+    public static double[] glNearFar(float[] proj) {
+        double a = proj[10], b = proj[14];
+        double near = b / (a - 1.0), far = b / (a + 1.0);
+        if (!(near > 0) || !(far > near) || Double.isInfinite(far) || proj[11] != -1f) return new double[] {Double.NaN, Double.NaN};
+        return new double[] {near, far};
+    }
 
     /** Vertical field of view in radians from the y scale {@code proj[5]} of a perspective matrix. */
     public static float fovY(float[] proj) {

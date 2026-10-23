@@ -1,0 +1,82 @@
+# runClient vs fake_guest --frames --in-front, a stone wall placed in front: peer log
+[guest   0.00s] connecting to 127.0.0.1:47855
+[guest   0.01s] connected: host "Minecraft Java 1.7.10", protocol v1, session 0x1131e98a
+[guest   0.01s] pixel file /var/folders/3j/xwr0chjs1wxghh4f209rllxw0000gn/T/rewrite-bridge-87047-guest-1131e98a-0.frames (320x240, depth: true, latency 40 ms)
+[guest   0.02s] cube placed 4 m ahead of the camera at [0.5, 5.63, 4.4]
+[guest   0.13s] collision query 1: 4646 triangles within 16 m of [0.5, 4.0, 0.5]
+[guest   0.13s] cube stands on the host's ground at y 4.00
+[guest   1.00s] got 117 cameras; sent 116 poses, 110 frames (render 0.1 ms each); focus with the host
+[guest   2.00s] got 120 cameras; sent 117 poses, 117 frames (render 0.1 ms each); focus with the host
+[guest   2.01s] asking the host for input focus
+[guest   3.00s] got 118 cameras; sent 117 poses, 118 frames (render 0.1 ms each); focus with the host
+[guest   4.00s] got 118 cameras; sent 113 poses, 112 frames (render 0.1 ms each); focus with the host
+[guest   5.00s] got 120 cameras; sent 117 poses, 117 frames (render 0.1 ms each); focus with the host
+[guest   5.58s] collision query 2: 4646 triangles within 16 m of [0.5, 4.0, 0.5]
+[guest   6.00s] got 118 cameras; sent 117 poses, 117 frames (render 0.1 ms each); focus with the host
+[guest   7.00s] got 113 cameras; sent 113 poses, 113 frames (render 0.1 ms each); focus with the host
+[guest   7.58s] collision query 3: 4682 triangles within 16 m of [0.5, 4.0, 0.5]
+[guest   8.00s] got 120 cameras; sent 118 poses, 118 frames (render 0.1 ms each); focus with the host
+[guest   9.00s] got 119 cameras; sent 119 poses, 120 frames (render 0.1 ms each); focus with the host
+[guest  10.00s] got 120 cameras; sent 118 poses, 117 frames (render 0.1 ms each); focus with the host
+[guest  11.00s] got 116 cameras; sent 115 poses, 115 frames (render 0.1 ms each); focus with the host
+[guest  12.00s] got 117 cameras; sent 116 poses, 116 frames (render 0.1 ms each); focus with the host
+[guest  12.74s] collision query 4: 4682 triangles within 16 m of [0.5, 4.0, 0.5]
+[guest  13.00s] got 120 cameras; sent 118 poses, 118 frames (render 0.1 ms each); focus with the host
+[guest  14.00s] got 119 cameras; sent 117 poses, 117 frames (render 0.1 ms each); focus with the host
+[guest  15.00s] got 118 cameras; sent 118 poses, 118 frames (render 0.1 ms each); focus with the host
+[guest  16.00s] got 120 cameras; sent 120 poses, 120 frames (render 0.1 ms each); focus with the host
+[guest  17.00s] got 120 cameras; sent 120 poses, 120 frames (render 0.1 ms each); focus with the host
+[guest  17.95s] collision query 5: 4682 triangles within 16 m of [0.5, 4.0, 0.5]
+[guest  18.00s] got 119 cameras; sent 117 poses, 117 frames (render 0.1 ms each); focus with the host
+[guest  18.68s] LOST the host: peer said bye: closing
+
+# the mod's own log lines (this run also places a stair, a slab, a fence and a wall for the collision shapes)
+[15:56:49] [Client thread/INFO] [minecraft-link]: autotest: 48 lines from .../scripts/host-1710.txt, screenshots to .../1.7.10
+[15:56:49] [Client thread/INFO] [minecraft-link]: Minecraft Link loaded; commands: /link host, /link guest, /link stop, /link status, /link focus <host|guest>
+[15:57:01] [Client thread/INFO] [minecraft-link]: autotest: /gamerule doDaylightCycle false
+[15:57:01] [Client thread/INFO] [minecraft-link]: autotest: /time set 6000
+[15:57:01] [Client thread/INFO] [minecraft-link]: autotest: /weather clear
+[15:57:01] [Client thread/INFO] [minecraft-link]: autotest: /tp @p 0.5 4 0.5
+[15:57:01] [Client thread/INFO] [minecraft-link]: autotest: /setblock 6 4 5 minecraft:stone_stairs 0
+[15:57:01] [Client thread/INFO] [minecraft-link]: autotest: /setblock 7 4 5 minecraft:stone_slab 0
+[15:57:01] [Client thread/INFO] [minecraft-link]: autotest: /setblock 8 4 5 minecraft:fence
+[15:57:01] [Client thread/INFO] [minecraft-link]: autotest: /setblock 9 4 5 minecraft:cobblestone_wall
+[15:57:04] [Client thread/INFO] [minecraft-link]: autotest: EXTSHOT 20-host-before-link
+[15:57:06] [Client thread/INFO] [minecraft-link]: autotest: /link host 47855
+[15:57:06] [Client thread/INFO] [minecraft-link]: link started: host on 127.0.0.1:47855, waiting for a guest; sent 0 cameras, 0 collision snapshots (0 triangles); received 0 poses, 0 frames; 0 guest entities; datagrams in/out 0/0, malformed 0, stale 0, foreign 0
+[15:57:06] [Client thread/INFO] [minecraft-link]: /link: link host on 127.0.0.1:47855, waiting for a guest; sent 0 cameras, 0 collision snapshots (0 triangles); received 0 poses, 0 frames; 0 guest entities; datagrams in/out 0/0, malformed 0, stale 0, foreign 0
+[15:57:06] [Client thread/INFO] [minecraft-link]: autotest: START_PEER
+[15:57:06] [Client thread/INFO] [minecraft-link]: connected to Fake Guest (guest, protocol v1)
+[15:57:06] [minecraft-link-frames/INFO] [minecraft-link]: pixel file /tmp/rewrite-bridge-87047-guest-1131e98a-0.frames mapped: 320x240, 3 slots, depth plane: true
+[15:57:06] [Client thread/INFO] [minecraft-link]: showing guest entity 1 (Fake Guest demo/cube) as a placeholder cube
+[15:57:06] [Client thread/INFO] [minecraft-link]: guest spawned entity 1 (Fake Guest demo/cube)
+[15:57:06] [Client thread/INFO] [minecraft-link]: peer announced a pixel file: /tmp/rewrite-bridge-87047-guest-1131e98a-0.frames 320x240
+[15:57:06] [Client thread/INFO] [minecraft-link]: collision shape of minecraft:stone_stairs (BlockStairs) at 6 4 5: [[0.0, 0.0, 0.0, 1.0, 0.5, 1.0], [0.5, 0.5, 0.0, 1.0, 1.0, 1.0]]
+[15:57:06] [Client thread/INFO] [minecraft-link]: collision shape of minecraft:stone_slab (BlockStoneSlab) at 7 4 5: [[0.0, 0.0, 0.0, 1.0, 0.5, 1.0]]
+[15:57:06] [Client thread/INFO] [minecraft-link]: collision shape of minecraft:fence (BlockFence) at 8 4 5: [[0.375, 0.0, 0.375, 0.625, 1.5, 0.625]]
+[15:57:06] [Client thread/INFO] [minecraft-link]: collision shape of minecraft:cobblestone_wall (BlockWall) at 9 4 5: [[0.25, 0.0, 0.25, 0.75, 1.5, 0.75]]
+[15:57:06] [Client thread/INFO] [minecraft-link]: OpenGL: GL_VERSION 2.1 Metal - 90.5, GLSL 1.20, renderer Apple M5, vendor Apple, ARB_texture_float true, ARB_depth_texture true
+[15:57:06] [Client thread/INFO] [minecraft-link]: frame program linked (GLSL 1.20)
+[15:57:06] [Client thread/INFO] [minecraft-link]: first guest frame drawn: framebuffer 854x480, bound framebuffer object 1, viewport 854x480
+[15:57:08] [Client thread/INFO] [minecraft-link]: the guest asks for the input focus (/link focus guest to give it)
+[15:57:11] [Client thread/INFO] [minecraft-link]: autotest: EXTSHOT 21-host-cube
+[15:57:12] [Client thread/INFO] [minecraft-link]: autotest: screenshot .../1.7.10/21-host-cube-fbo.png
+[15:57:13] [Client thread/INFO] [minecraft-link]: autotest: /setblock -3 4 2 minecraft:stone
+[15:57:13] [Client thread/INFO] [minecraft-link]: autotest: /setblock -2 4 2 minecraft:stone
+[15:57:13] [Client thread/INFO] [minecraft-link]: autotest: /setblock -1 4 2 minecraft:stone
+[15:57:13] [Client thread/INFO] [minecraft-link]: autotest: /setblock 0 4 2 minecraft:stone
+[15:57:13] [Client thread/INFO] [minecraft-link]: autotest: /setblock 1 4 2 minecraft:stone
+[15:57:13] [Client thread/INFO] [minecraft-link]: autotest: /setblock 2 4 2 minecraft:stone
+[15:57:13] [Client thread/INFO] [minecraft-link]: autotest: /setblock 3 4 2 minecraft:stone
+[15:57:13] [Client thread/INFO] [minecraft-link]: autotest: /setblock 4 4 2 minecraft:stone
+[15:57:16] [Client thread/INFO] [minecraft-link]: autotest: EXTSHOT 22-host-wall
+[15:57:18] [Client thread/INFO] [minecraft-link]: autotest: screenshot .../1.7.10/22-host-wall-fbo.png
+[15:57:20] [Client thread/INFO] [minecraft-link]: autotest: EXTSHOT 23-host-turned
+[15:57:22] [Client thread/INFO] [minecraft-link]: autotest: player feet at 0.5 4.0 0.5 (eye y 5.620000004768372); last camera sent at 0.542 5.629 0.410; yaw 25.0 pitch 5.0; block below: Grass Block
+[15:57:22] [Client thread/INFO] [minecraft-link]: autotest: /link status
+[15:57:22] [Client thread/INFO] [minecraft-link]: /link: host on 127.0.0.1:47855, connected to Fake Guest (session 1131e98a), input focus with the host; sent 1962 cameras, 4 collision snapshots (4682 triangles); received 1937 poses, 1933 frames; 1 guest entities; datagrams in/out 3936/2113, malformed 0, stale 0, foreign 0; frames drawn 1962, reprojected 3165 (pixel file 320x240 with depth), host depth convention 0, c
+[15:57:23] [Client thread/INFO] [minecraft-link]: autotest: EXTSHOT 24-host-status
+[15:57:25] [Client thread/INFO] [minecraft-link]: autotest: /link stop
+[15:57:25] [Client thread/INFO] [minecraft-link]: /link: stopping the link (bye, then half-close)
+[15:57:25] [minecraft-link-close/INFO] [minecraft-link]: link closed (2213 cameras, 5 collision snapshots, 0 poses sent)
+[15:57:27] [Client thread/INFO] [minecraft-link]: autotest: done, closing the game

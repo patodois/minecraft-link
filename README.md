@@ -1,58 +1,74 @@
-# minecraft-link
+# minecraft-link (Minecraft 1.7.10, Forge)
 
 **NOT AN OFFICIAL MINECRAFT PRODUCT. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT.**
 
-A client-side [Fabric](https://fabricmc.net) mod for Minecraft: Java Edition that speaks the
-**rewrite-bridge passthrough link protocol v1** (`docs/CONTRACT.md` in the `rewrite-bridge`
-repository, revision 3), so a running Minecraft can be a **host** or a **guest** next to any other
-game or rewrite that speaks it: the Rust tools, the Hytale plugin, anything else.
+A client-side [Forge](https://files.minecraftforge.net) mod for Minecraft: Java Edition **1.7.10** (the version
+GregTech: New Horizons and the big tech modpacks of that era run on) that speaks the **rewrite-bridge passthrough link
+protocol v1** (`docs/CONTRACT.md` in the `rewrite-bridge` repository, revision 3), so a running Minecraft can be a
+**host** or a **guest** next to any other game or rewrite that speaks it: the Rust tools, the Hytale plugin, anything
+else.
 
-- **Host** (you play in Minecraft): sends your camera every rendered frame and the collision shapes
-  around you, shows the guest's entities in the world, and draws the guest's rendered frames inside
-  the world, hidden correctly behind blocks.
-- **Guest** (Minecraft publishes its player): `spawn`s your player and sends its pose every tick, and
-  hands the movement keys over when the host holds the input focus.
+- **Host** (you play in Minecraft): sends your camera every rendered frame and the collision shapes around you,
+  shows the guest's entity in the world, and draws the guest's rendered frames inside the world, hidden correctly
+  behind blocks.
+- **Guest** (Minecraft publishes its player): `spawn`s your player and sends its pose every tick, and hands the
+  movement keys over when the host holds the input focus.
 
-The protocol implementation is [`link-java`](../link-java) (pure Java, tested against the Rust
-reference peers), bundled into the mod jar. Everything binds and connects to `127.0.0.1` only.
-
-Tested with Minecraft **26.3**, Fabric Loader **0.20.1**, Fabric API **0.165.0+26.3**, Fabric Loom
-**1.19.3**, Gradle 9.8.2, JDK 25.
+This is the 1.7.10 port of the Fabric mod for 26.3 (branch `main` and commit `7b25351`). The protocol implementation is
+[`link-java`](../link-java) (pure Java, Java 8 bytecode, tested against the Rust reference peers); it is merged into
+the mod jar. Everything binds and connects to `127.0.0.1` only. There is a sibling branch for 1.12.2.
 
 ## What this mod is not
 
-It contains **no Mojang code and no Mojang assets**. It is compiled against Minecraft (Loom downloads
-the game files from Mojang's servers into your own Gradle cache at build time; nothing of Mojang's
-is in this repository or in the jar) and does not redistribute it. It is not affiliated with Mojang
-or Microsoft.
+It contains **no Mojang code, no Mojang assets and no Forge code**. The jar holds only this project's classes and
+`link-java`'s. It is compiled against Minecraft and Forge (the build downloads them from Mojang's and Forge's own
+servers into your Gradle cache; nothing of theirs is in this repository or in the jar) and does not redistribute
+them. It is not affiliated with Mojang, Microsoft or the Forge project.
 
 What Mojang's rules say about mods (read at minecraft.net on 2026-10-23: the
 [End User License Agreement](https://www.minecraft.net/en-us/eula) and the
 [Usage Guidelines](https://www.minecraft.net/en-us/usage-guidelines)):
 
-- A **mod** is "something original" that does not contain a substantial part of Mojang's copyrightable
-  code or content. You own what you create, and may use and share it **as long as you do not sell it
-  or try to make money from it**, and **do not distribute a modded version of the game** (a hacked
-  client or server): distribute the mod only, never Minecraft with the mod inside.
-- The Usage Guidelines add: no play-to-earn function and nothing that verifies out-of-game ownership
-  (for example NFTs) to unlock in-game content; a product that mentions Minecraft must say that it is
-  not official ("NOT AN OFFICIAL MINECRAFT [PRODUCT]. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR
-  MICROSOFT") and must not use the Minecraft name as its primary or dominant name, which is why the
-  mod's display name is "Rewrite Link for Minecraft" (the repository and the mod id keep the working
-  name `minecraft-link`, which you may want to change before publishing anywhere).
-- Mojang may take down mods that break the guidelines and may change them at any time; they say they do
-  not take responsibility for updates that break mods.
+- A **mod** is "something original" that does not contain a substantial part of Mojang's copyrightable code or
+  content. You own what you create, and may use and share it **as long as you do not sell it or try to make money
+  from it**, and **do not distribute a modded version of the game**: distribute the mod only, never Minecraft with
+  the mod inside. This project's release artifact is the mod jar alone.
+- The Usage Guidelines add: no play-to-earn function and nothing that verifies out-of-game ownership; a product that
+  mentions Minecraft must say that it is not official ("NOT AN OFFICIAL MINECRAFT [PRODUCT]. NOT APPROVED BY OR
+  ASSOCIATED WITH MOJANG OR MICROSOFT") and must not use the Minecraft name as its primary or dominant name, which is
+  why the mod's display name is "Rewrite Link for Minecraft" (the repository and the mod id keep the working name
+  `minecraft-link`, which you may want to change before publishing anywhere).
+- Mojang may take down mods that break the guidelines and may change them at any time.
+- Forge itself is not shipped here either. A mod that only calls Forge's API is not bound by Forge's licence terms
+  (MinecraftForge Public License section 4); redistributing Forge or MCP data is a different matter and is not done.
 
-This mod only connects to other programs on your own machine and sends nothing to any server. The
-only guest content it draws is what the guest's own program renders. It does not read or change another
-process's memory.
+This mod only connects to other programs on your own machine and sends nothing to any server. The only guest content
+it draws is what the guest's own program renders. It does not read or change another process's memory.
 
-## Use
+## Credits
 
-1. Build or install the jar (below) and start Minecraft with Fabric.
-2. Join a world (singleplayer or a server; the mod is client-side only and reads only what your client
-   already knows).
-3. `/link host` (the other game connects to you) or `/link guest` (you connect to the other game's host).
+The build setup follows the templates of the [GTNewHorizons](https://github.com/GTNewHorizons) community:
+[RetroFuturaGradle](https://github.com/GTNewHorizons/RetroFuturaGradle) (LGPL-2.1; the Gradle plugin that
+decompiles, deobfuscates and runs Minecraft and Forge for mod development, also on Apple silicon) with its `example`
+project, and [ExampleMod1.7.10](https://github.com/GTNewHorizons/ExampleMod1.7.10) (MIT), which this branch's layout
+and the lwjgl3ify test below are based on. None of their code is in the jar. The Apple silicon LWJGL 2 natives that
+RetroFuturaGradle downloads for development runs are the [MinecraftMachina](https://github.com/MinecraftMachina/lwjgl)
+build. [lwjgl3ify](https://github.com/GTNewHorizons/lwjgl3ify), [Hodgepodge](https://github.com/GTNewHorizons/Hodgepodge)
+and [UniMixins](https://github.com/LegacyModdingMC/UniMixins) are used only to test (below); the mod does not depend on
+them.
+
+## Install
+
+Build the jar (below) or take `minecraft-link-1.7.10-0.1.0.jar`.
+
+1. In Prism Launcher make (or use) an instance for **Minecraft 1.7.10 with Forge** (10.13.4.1614, Prism's Edit
+   Instance > Version > Install Forge). Java 8, or the modern-Java setup of a GTNH instance (lwjgl3ify).
+2. Edit Instance > Mods > Add (or copy the jar into the instance's `minecraft/mods` folder). Do not change anything
+   else about the instance.
+3. Start the game and join a world (singleplayer or a server; the mod is client-side only and reads only what your
+   client already knows; a server does not need it, and a server that has the jar in its `mods` folder just ignores
+   it).
+4. `/link host` (the other game connects to you) or `/link guest` (you connect to the other game's host).
 
 | Command | Meaning |
 |---|---|
@@ -63,8 +79,9 @@ process's memory.
 | `/link focus host\|guest` | host: give the input focus; guest: ask the host for it |
 | `/link` | same as `status` |
 
-Leaving the world and quitting the game close the link the same way (`despawn` for a guest, then
-`bye`, then the half-close of CONTRACT 6.1).
+The commands are Forge client commands (`ClientCommandHandler`): they run in your client and the text is never sent to
+a server. Leaving the world and quitting the game close the link the same way (`despawn` for a guest, then `bye`,
+then the half-close of CONTRACT 6.1).
 
 ### `config/minecraft-link.json`
 
@@ -92,15 +109,16 @@ Written with the defaults on first start. Unknown keys are ignored.
 }
 ```
 
-`offset` is how the two worlds are lined up: Minecraft's flat test world has its ground at y = 4,
-a Rust guest's ground is y = 0, so the run used for the screenshots below has `"offset": [0, -4, 0]`.
+(The file is plain JSON; the `//` notes above are only for this page.) `offset` is how the two worlds are lined up:
+the flat test world's ground is at y = 4, a Rust guest's ground is y = 0, so a guest that should stand on that ground
+may want `"offset": [0, -4, 0]`.
 
 ## Coordinates (CONTRACT section 4)
 
 Minecraft's world is already right-handed and +Y up with 1 block = 1 m: +X east, +Y up, +Z south, and
-(east, up, south) is a right-handed triple, so with the default settings **a position maps to
-itself** (`flip_*`, `scale` and `offset` default to the identity). What differs is how Minecraft names
-directions, and that is what `Mapping` converts (and unit-tests):
+(east, up, south) is a right-handed triple, so with the default settings **a position maps to itself** (`flip_*`,
+`scale` and `offset` default to the identity). What differs is how Minecraft names directions, and that is what
+`Mapping` converts (and unit-tests; it is the same code as on 26.3, 1.7.10 uses the same yaw and pitch conventions):
 
 | Minecraft | Link (contract) |
 |---|---|
@@ -108,137 +126,179 @@ directions, and that is what `Mapping` converts (and unit-tests):
 | `pitch` in degrees, 0 level, **+90 looks down**, -90 up | same quaternion; the up axis tips with it |
 | view direction `(-sin(yaw)cos(pitch), -sin(pitch), cos(yaw)cos(pitch))` | the entity's local +Z rotated by that quaternion |
 | velocity in blocks per tick | metres per second: times 20 |
-| the camera (`Camera.setRotation`: `rotationYXZ(PI - yaw, -pitch, 0)`, looks down its local -Z) | `view` is taken from Minecraft's view-rotation matrix and the camera position, not rebuilt from yaw/pitch |
+| the camera: the game's own modelview matrix, which looks down its local -Z | `view` is read from OpenGL (below), not rebuilt from yaw/pitch |
 
-Sign checks done in the tests: yaw 0 gives the identity rotation and faces +Z; yaw 90 faces -X; pitch
-+90 faces -Y; a camera at yaw 0 puts a point 5 m to the south at view z = -5, and a point to the east
-at negative view x (east is to the left when facing south); `Mapping` agrees with Minecraft's own
-camera quaternion for random yaw and pitch.
-
-The guest's pose is the **feet position** (the entity origin), the **view** rotation, the real
-displacement over the tick as velocity, the yaw change as angular velocity about +Y, and the TELEPORT flag on the first pose and
-when the player moved more than 8 blocks in one tick.
+The guest's pose is the **feet position** (the entity origin), the **view** rotation, the real displacement over the
+tick as velocity, the yaw change as angular velocity about +Y, and the TELEPORT flag on the first pose and when the
+player moved more than 8 blocks in one tick. Note that in 1.7.10 the client player's `posY` is the **eye** position
+(1.62 above the feet); the feet are the bottom of the bounding box, which is what the mod publishes.
 
 ## Host: how it works
 
-**Camera**, every rendered frame, from the camera the game is drawing with:
+All hooks are plain Forge events and client commands: **no coremod, no mixin, no access transformer**.
 
-- `view = R * translate(-position)` from the extracted `CameraRenderState` (Minecraft renders
-  camera-relative, so it keeps the rotation and the position apart), taken at the start of the level
-  render on the render thread.
-- A guest's picture must match the world while the player walks, but Minecraft draws the level with
-  `projection * bob` (view bobbing and damage tilt). The renderer mixin below copies that final matrix and
-  `bob = projection^-1 * drawn` is folded into `view`.
-- **Depth range.** The contract's table names OpenGL (near -1, far +1) as 0, but Minecraft 26.3 does
-  not use that: it builds the projection with near and far **swapped** (reversed depth), and the clip range is 0..1
-  with Vulkan or OpenGL with `ARB_clip_control` and **-1..1 on macOS's OpenGL 4.1**, which the contract has no code for.
-  `CameraMath.classify` measures which of the four conventions the matrix really has (near and far
-  planes), a reversed 0..1 matrix is sent as `depth_range` 2, and the reversed -1..1 one is rewritten into the plain OpenGL matrix with the
-  same field of view, aspect, near and far (`depth_range` 0). On the Mac of the test runs below that is what happened (`/link status` says "camera depth_range rewritten to 0").
-- `near` = 0.05 (`Camera.PROJECTION_Z_NEAR`, the constant Minecraft passes) and `far` = the extracted
-  `depthFar` = `max(4 * render distance * 16, cloud range * 16)` blocks. Minecraft has no setting called
-  "far plane"; these are the numbers its own projection is built from. `fov_y` is read back from the matrix
-  (`2 * atan(1 / m[5])`), so it includes the sprint and underwater modifiers. The viewport is the main render target's size.
-- The sample is handed to the link thread through an `AtomicReference`; the link thread sends it. A newer sample replaces one not yet sent.
+**Camera**, every rendered frame, from `RenderWorldLastEvent` (after the world is drawn, before the hand and the GUI):
 
-**Collision**, a snapshot of the blocks' collision shapes within `collision_radius` (16) of the player as
-triangles, counter-clockwise from outside, chunked by the link library (226 triangles per datagram).
+- The projection and the modelview matrix are **read back from OpenGL** (`GL_PROJECTION_MATRIX`,
+  `GL_MODELVIEW_MATRIX`), so they are exactly what the game used for the world pass, including view bobbing, the
+  hurt tilt, the 0.1 m the first-person camera sits behind the eye, and the field of view of the moment.
+  On the test run the camera sent for a player standing at (0.5, 4, 0.5) was at (0.542, 5.629, 0.410) looking at yaw 25
+  and pitch 5, which is the eye (0.5, 5.62, 0.5) moved 0.1 m back along the view direction.
+- Minecraft 1.7.10 draws the world relative to the render view entity's interpolated position
+  (`lastTickPos + (pos - lastTickPos) * partialTicks`), so the modelview matrix is a rotation without translation.
+  The link's `view` is `modelview * translate(-thatPosition)` (then the mapping's flip, scale and offset).
+- The projection is `gluPerspective(fov, aspect, 0.05, farPlaneDistance * 2)`: standard OpenGL, clip depth -1..1,
+  **not reversed** (the contract's `depth_range` 0). Near and far are recovered from the matrix
+  (`CameraMath.glNearFar`); the contract's classification still measures it, so an unusual matrix is rewritten or
+  reported instead of sent wrongly.
+- The viewport sizes sent are the **framebuffer's** real size (`Framebuffer.framebufferWidth/Height`), not the window's.
 
-- The scan reads the world on the game thread in slices (a one-millisecond budget per tick, one
-  horizontal layer at a time); the triangles are built, mapped and hashed on a helper thread.
-- A face is left out when a full block sits behind it, and where two boxes of one block touch (the inside
-  of a stair), so solid ground costs only its top. A flat desert world gave about 7,000 triangles for r = 16 (its rim included).
-- A new scan starts when the player moved a block, or `collision_interval_ms` after the last one; an
-  unchanged result is not sent again (except as a refresh every 5 s). Minecraft has no client-side block-change event to hook, so changes are found by rescanning.
+**Collision**, a snapshot of the blocks' collision shapes within `collision_radius` (16) of the player as triangles,
+counter-clockwise from outside, chunked by the link library.
 
-**Guest entities** are shown as client-side `block_display` entities (never sent to a server, never
-saved): a magenta glazed terracotta whose pattern points along the entity's front, centred on the pose, with the pose's
-scale. They are placed at the start of every frame from the pose track at `now - interp_delay_ms`,
-interpolated between the timestamped poses (slerp for the rotation) or extrapolated with the pose velocity
-(at most 250 ms); the TELEPORT flag is honoured. Despawn, `bye` and a lost peer remove them. Only the heading
-is shown, not roll. While a guest's frames are on screen the placeholder is hidden.
+- Shapes are what the game uses for entity collision: an opaque block whose `getCollisionBoundingBoxFromPool` is the
+  full cube is a cube (the common case), everything else (slabs, stairs, fences, walls, ...) gives the boxes of
+  `Block.addCollisionBoxesToList`. The first block of each class that is not a plain cube is logged with its boxes
+  (stairs: two boxes, bottom slab: one half-height box, fence: a 0.25 wide post 1.5 m high, wall: a 0.5 wide post).
+- The scan reads the world on the game thread in slices (a one-millisecond budget per tick, one horizontal layer at
+  a time); triangles are built, mapped and hashed on a helper thread. A face is left out when a full block sits behind
+  it, and where two boxes of one block touch (the inside of a stair). A new scan starts when the player moved a block,
+  or `collision_interval_ms` after the last one; an unchanged result is not sent again (except as a refresh every 5 s).
+
+**Guest entities** are drawn as a **placeholder cube** straight into the world pass (a magenta cube, 1 m wide times
+the pose's scale, centred on the pose, its front face yellow), placed every rendered frame from the pose track at
+`now - interp_delay_ms` (interpolated, or extrapolated with the pose velocity, at most 250 ms; the TELEPORT flag is
+honoured). It is depth-tested against the world, exists only in your client (no entity is added to the level, nothing
+is sent to a server or saved) and is hidden while a guest's frames are on screen.
 
 **Guest frames (pixel channel, CONTRACT 9.6 and 9.7).**
 
-1. `frame_channel` names the pixel file; the frame worker maps it read-only (`PixelFile.Reader` in
-   link-java: all header and depth checks of the contract, the seqlock, an unknown `depth_format` read as colour only).
-2. On each `Frame` it copies the slot, looks `camera_seq` up in a ring of the last 64 cameras sent and reprojects the
-   frame (colour and linear depth in metres) from that camera to the one being presented now (`Reproject`, on a helper thread).
-3. At the start of a frame the render thread uploads the result to an RGBA8 and an R32F texture. After the main pass of the
-   level it draws one fullscreen pass (`assets/minecraft_link/shaders/core/link_frame.fsh`) that converts Minecraft's depth buffer to linear metres with the contract's
-   formulas for its convention and keeps the guest's pixel only where it is nearer than the world, with straight-alpha blending.
-   A guest without a depth plane, or with a camera not in the ring, is drawn as an overlay or without reprojection.
+1. `frame_channel` names the pixel file; the frame worker maps it read-only (`PixelFile.Reader` in link-java: all
+   header and depth checks of the contract, the seqlock).
+2. On each `Frame` it copies the slot (colour and linear depth in metres), looks `camera_seq` up in a ring of the last
+   64 cameras sent and reprojects the frame to the camera being presented now (`Reproject`, on a helper thread).
+3. At `RenderWorldLastEvent` the render thread uploads the result to an RGBA8 texture and a 32-bit float texture
+   (`GL_LUMINANCE32F_ARB`), copies the game's **depth buffer** into a `GL_DEPTH_COMPONENT24` texture with
+   `glCopyTexSubImage2D` (from the bound framebuffer, which is `Minecraft.getFramebuffer()` in an unmodified game), and
+   draws one fullscreen quad with a **GLSL 1.20** program (`#version 120`, `texture2D`, `varying`) that converts the
+   game's depth to linear metres with the contract's formula for standard OpenGL
+   (`2 f n / (f + n - ndc (f - n))`, `ndc = 2 d - 1`) and keeps the guest's pixel only where it is nearer than the
+   world, with straight-alpha blending. A guest without a depth plane is drawn as an overlay.
+4. The pass is bracketed by `glPushAttrib(GL_ALL_ATTRIB_BITS)` / `glPopAttrib` plus an explicit save and restore of the
+   active texture unit, the texture bindings of units 0 to 2 and the current program. If the GL context cannot do it
+   (no GL 2.0 or no `ARB_texture_float`), frames are switched off and `/link status` says why.
+5. At first use the mod logs `GL_VERSION`, the GLSL version, renderer, vendor and the two extensions it needs. Found on
+   the test machine, with LWJGL 2 and with lwjgl3ify alike: `GL_VERSION 2.1 Metal - 90.5, GLSL 1.20, Apple M5`.
+   The framebuffer was 854x480 with LWJGL 2 (macOS shows the window scaled up) and 1708x960 under lwjgl3ify (HiDPI);
+   the mod uses the framebuffer's size either way.
 
 ## Threads and safety
 
-- Minecraft 26.3 extracts and draws on one thread (the game/render thread). **Nothing on it ever calls
-  into the link or waits**: it writes samples into `AtomicReference`s, reads thread-safe holders, and uploads/draws what the frame worker finished.
+- Minecraft 1.7.10 ticks and draws on one thread (the client thread). **Nothing on it ever calls into the link or
+  waits**: it writes samples into `AtomicReference`s, reads thread-safe holders, and uploads/draws what the frame
+  worker finished.
 - Link I/O (`LinkRunner`, 2 ms period), the collision builder and the frame worker are daemon threads.
-- Closing (`/link stop`, leaving the world, quitting) runs on a helper thread: despawn, `bye`, half-close, drain 200 ms, close.
-  Only at game exit does the shutdown hook wait (at most 2 s) so the bye gets out.
+- Closing (`/link stop`, leaving the world, quitting) runs on a helper thread: despawn, `bye`, half-close, drain 200 ms,
+  close. Only at game exit does a JVM shutdown hook wait (at most 2 s) so the bye gets out.
 - Only `127.0.0.1` is used, and the peer's datagrams are accepted from its announced address and session only.
-- The pixel file path comes from the peer: it must be absolute, a regular file, and pass the contract's size checks before it is mapped (read-only).
-- **Input focus**: while the other side holds the focus, `LocalPlayer.input` is replaced by an empty `ClientInput` (no keys pressed) and put back when the
-  focus returns or the session ends. Movement keys, jump and sneak are handed over; mouse look, chat and the inventory stay with Minecraft.
-
-### The one mixin (`GameRendererMixin`)
-
-Two read-only injections into `GameRenderer`, nothing modified: `extract` at its head (place the guest entities for this frame, at frame rate
-rather than the 20 Hz tick, and upload the guest texture while no render pass is open), and `renderLevel` just before the projection
-matrix is handed to the renderer (copy the matrix that includes view bobbing; Minecraft computes it in a local variable and has no getter for it).
-Everything else uses Fabric API events (`LevelRenderEvents`, `ClientTickEvents`, client commands).
+- The pixel file path comes from the peer: it must be absolute, a regular file, and pass the contract's size checks
+  before it is mapped (read-only).
+- **Input focus**: while the other side holds the focus, `EntityPlayerSP.movementInput` is replaced by an empty
+  `MovementInput` (nothing pressed) and put back when the focus returns or the session ends. Movement keys, jump and
+  sneak are handed over; mouse look, chat and the inventory stay with Minecraft.
+- Forge 1.7.10 generates its event handlers as bytecode in another package, so the classes that hold `@SubscribeEvent`
+  methods are `public`.
 
 ## Build and test
 
+Needs a JDK 17 or newer for Gradle itself (the build was run with JDK 25); the game and the mod compile with a
+**Java 8** toolchain that Gradle downloads (Azul Zulu, which has macOS arm64 builds). The toolchain is
+[RetroFuturaGradle](https://github.com/GTNewHorizons/RetroFuturaGradle) 2.0.6 with Gradle 9.8.2, Minecraft 1.7.10,
+Forge 10.13.4.1614, MCP stable_12.
+
 ```sh
-export JAVA_HOME=/opt/homebrew/opt/openjdk@25     # Minecraft 26.3 needs Java 25
-./gradlew build --no-daemon                       # build/libs/minecraft-link-0.1.0.jar (link-java jar-in-jar), runs the tests
-./gradlew test --no-daemon                        # 40 unit tests
-./gradlew runClient --no-daemon                   # the real client with an offline dev account (-Xmx2G)
+export JAVA_HOME=/opt/homebrew/opt/openjdk@25
+./gradlew build --no-daemon          # build/libs/minecraft-link-1.7.10-0.1.0.jar (reobfuscated, link-java merged in), runs the tests
+./gradlew test --no-daemon           # 41 unit tests, no game needed
+./gradlew runClient --no-daemon      # the real client, deobfuscated dev environment, offline dev account, -Xmx1500m
+./gradlew runObfClient --no-daemon   # the real client with the reobfuscated release jar, as a player's game runs it
 ```
 
-`link-java` is expected next to this repository (`../link-java`, a Gradle composite build); `gradle.properties` keeps the Gradle JVM at 1 GB
-and the daemon off. Loom downloads the game and its libraries into `~/.gradle` and `.gradle/loom-cache`;
-nothing of that is committed.
+`link-java` is expected next to this repository (`../link-java`); the build runs its `jar` task (a Gradle included
+build) and merges the classes into the mod jar. `gradle.properties` keeps the Gradle JVM at 1 GB and the daemon off.
+The first build downloads Minecraft and the assets from Mojang, Forge from the Forge maven and the plugin from the
+GTNH maven, and decompiles Minecraft (about one minute).
 
-Unit tests (JUnit 5): the coordinate mapping, camera matrix conversion (view, bobbing, the four depth conventions, rewriting, linear depth),
-collision triangles for a full block, a slab and stairs, **both from hand-written boxes and from Minecraft's own block shapes**
-(the registries are bootstrapped; no window needed), pose interpolation, reprojection, the camera ring and the settings file.
+Before every `runClient`, `runObfClient` and `runVanillaClient` launch the build writes `soundVolume:0.0` and
+`musicVolume:0.0` (and a few settings a scripted run needs: no pause on lost focus, windowed, FBOs on) into
+`run/options.txt`, keeping the rest of the file.
+
+Unit tests (JUnit 5, plain Java 8): the coordinate mapping, camera matrix conversion (view, the depth conventions,
+rewriting, linear depth, near and far from a `gluPerspective` matrix, the camera position of a view), collision
+triangles for a full block, a slab and stairs from hand-written boxes and from the bounds of real Minecraft `Block`
+objects, pose interpolation, reprojection, the camera ring and the settings file. Minecraft 1.7.10's registries cannot
+be bootstrapped in a plain unit test (Forge Mod Loader needs its own class loader), so the shapes of the registered
+stairs, slab, fence and wall are checked in the game instead (their boxes are in `docs/test-logs`). The tests use JOML as
+a test-only reference for matrices; it is not in the jar.
 
 ### Scripted client runs
 
-`AutoTest` is a development aid, inactive unless `-Pautotest=<script>` is given. It drives the real client (create the built-in flat test world,
-run commands, press keys, take screenshots) from a plain script, so the mod can be tested without a person:
+`AutoTest` is a development aid, inactive unless `-Pautotest=<script>` is given. It drives the real client (create a
+superflat world, run commands including `/link ...`, press keys, take screenshots) from a plain script:
 
 ```sh
 ./gradlew runClient --no-daemon -Pautotest=/path/script.txt -Pshots=/path/screenshots
 ```
 
-Script lines: `create_world`, `wait_world`, `wait N` (ticks), `cmd /command`, `link host|guest|stop|status|focus ...`, `key forward down|up`,
-`look yaw pitch`, `pos`, `shot name`, `leave`, `quit`, `log text`. It uses only the game's own screens and commands.
+Script lines: `create_world`, `wait_world`, `wait N` (ticks), `cmd /command` (a `/link` command runs through
+`ClientCommandHandler`, anything else on the server; 1.7.10 has no `/fill`, use `/setblock`), `link host|guest|stop|status|focus ...`,
+`key forward down|up`, `look yaw pitch`, `view N`, `gui 0|1`, `pos`, `shot name` (the game's framebuffer), `leave`,
+`quit`, `log text`.
 
-### Test results (this machine, Minecraft 26.3 on macOS, OpenGL, Apple GPU)
+### Testing under lwjgl3ify, UniMixins and Hodgepodge (GTNH's modern Java stack)
 
-All against the Rust reference peers of `rewrite-bridge` (main, `93acfa2`) and `link-java`'s `LinkDemo`:
+GTNH runs 1.7.10 on Java 17 to 25 with LWJGL 3 (SDL3) through lwjgl3ify, which replaces LaunchWrapper with
+RetroFuturaBootstrap and needs UniMixins; Hodgepodge adds compatibility patches. The mod does not assume LWJGL 2's
+`Display`: it only calls the LWJGL 2 `GL11`/`GL13`/`GL14`/`GL20`/`ARBTextureFloat`/`GLContext` API, which lwjgl3ify
+provides.
+
+To test, copy [ExampleMod1.7.10](https://github.com/GTNewHorizons/ExampleMod1.7.10) somewhere, put the `-dev.jar`
+that `./gradlew build` leaves in `build/libs` into its `libs/`, add
+`runtimeOnlyNonPublishable(files("libs/minecraft-link-1.7.10-0.1.0-dev.jar"))` to its `dependencies.gradle`, and run its
+`./gradlew runClient25` (or `runClient21`, `runClient17`; GTNHGradle's tasks for lwjgl3ify, Hodgepodge and UniMixins).
+The result of that test is below. In this repository's own builds nothing of this is configured.
+
+## Test results (this machine: Apple M5, macOS 26.6.2, GL 2.1 Metal, Minecraft 1.7.10)
 
 | Test | Result |
 |---|---|
-| Host vs Rust `fake_guest` | connected, entity spawned, the cube's pose is shown as a block at the right place and stays there while the player walks (screenshots) |
-| Host vs Rust `fake_guest --frames` (colour + depth) | the guest's cube is drawn in the world at the right place, correctly lit faces and perspective when the player moves, and **hidden behind a stone wall placed in front of it** (screenshots) |
-| Guest vs Rust `fake_host` | host logs the player's pose moving from z 0.5 to 9.13 as the script walks; while the host holds the input focus the movement keys did nothing, after the host granted it they moved the player, and the host took it back |
-| Host vs `LinkDemo guest --orbit` (Java to Java) | connected, entity circles the camera, 7,000-triangle collision snapshots received |
-| Leave world / quit game with a link up | the peer logs "peer said bye: closing" (and `despawn` first for the guest) |
+| Title screen and a flat world, compared with a vanilla `runVanillaClient` title screen | colours right (wool: red, lime, blue, yellow, white; stone stairs and slab; sky, grass, water; the player skin), the viewport fills the window, no grey band, no swapped channels |
+| Host vs Rust `fake_guest --frames --in-front` (colour + depth) | the guest's cube is drawn in the world 4 m ahead, stays at the same place in the world when the player turns, and **a one-block stone wall (eight `/setblock`) placed in front hides its lower part** while the upper part stays visible |
+| Host vs `fake_guest` without frames | the placeholder cube is drawn at the pose (front face yellow, turning with the guest's heading) and is hidden behind the same wall |
+| Guest vs Rust `fake_host` | the host logs the player's pose; the movement keys did nothing while the host held the focus, moved the player (z 0.5 to 4.81) after the host granted it, and did nothing again after the host took it back |
+| `/link stop`, quitting | the peer logs "peer said bye: closing" |
+| The reobfuscated release jar under `runObfClient` (Forge with SRG names) | the same host test, same result |
+| **lwjgl3ify 3.0.33 + UniMixins 0.3.1 + Hodgepodge 2.7.206 + GTNHLib, Java 25 (Azul), GTNHGradle `runClient25`** | the same host test, same result: link, collision snapshots (stairs, slab, fence, wall included), camera, frame pass and wall occlusion all work; `GL_VERSION 2.1 Metal - 90.5, GLSL 1.20`, framebuffer 1708x960 |
+
+Logs of the runs are in `docs/test-logs/`. Screenshots are not committed (they show Mojang's textures).
 
 ## Known limits
 
-- Only tested on macOS with Minecraft's OpenGL backend. The Vulkan backend and Windows/Linux are not tested;
-  the shader assumes the screen quad's `texCoord.y` is 0 at the bottom (how Minecraft's own blit shaders treat it).
-- Guest entities are a placeholder block (no roll, no model); the guest's own frames are what shows the real model.
-- Reprojection is on the CPU and meant for guest images of a few hundred thousand pixels; cracks can appear on stretched surfaces.
+- Tested on macOS (Apple silicon) with the game's own OpenGL 2.1 context and an unmodified renderer, with LWJGL 2 and
+  with lwjgl3ify. Windows and Linux are not tested; the code uses only GL 2.1 features (GLSL 1.20,
+  `ARB_texture_float`, `ARB_depth_texture`). lwjgl3ify's config can ask for a core profile context; GLSL 1.20 does not
+  compile there and frames are then switched off (the mod logs it).
+- Tested standing and walking; sneaking changes the player's eye offset and was not checked against the camera.
+- Translucent water and ice do not write depth in vanilla, so a guest behind water is drawn over the water. The
+  first-person hand and the GUI are drawn after the frame pass and cover the guest's frame.
+- Other mods that replace the main framebuffer or the depth buffer (Angelica-style renderers, shader mods) are not
+  handled: the pass copies whatever is bound when `RenderWorldLastEvent` fires. Not tested inside the full GTNH pack.
+- Guest entities are a placeholder cube (heading only, no roll, no model); the guest's own frames show the real model.
+- Reprojection is on the CPU and meant for guest images of a few hundred thousand pixels; cracks can appear on
+  stretched surfaces.
 - Block changes are found by rescanning (every 0.5 s by default), not by an event.
 - Mouse and keyboard other than movement stay with Minecraft when the focus is elsewhere.
-- No server-side component: it is a client mod; entities it shows exist only in your client.
-- Frames are drawn in the main pass; the first-person hand, the GUI and post effects are drawn afterwards, so they cover the guest's frame.
+- No server-side component: it is a client mod.
 
 ## License
 

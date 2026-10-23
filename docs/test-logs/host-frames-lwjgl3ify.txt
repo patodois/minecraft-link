@@ -1,0 +1,95 @@
+# lwjgl3ify 3.0.33 + UniMixins 0.3.1 + Hodgepodge 2.7.206 on Java 25 (GTNHGradle runClient25): peer log
+[guest   0.00s] connecting to 127.0.0.1:47859
+[guest   0.01s] connected: host "Minecraft Java 1.7.10", protocol v1, session 0x06a30c6c
+[guest   0.01s] pixel file /var/folders/3j/xwr0chjs1wxghh4f209rllxw0000gn/T/rewrite-bridge-92009-guest-06a30c6c-0.frames (320x240, depth: true, latency 40 ms)
+[guest   0.02s] cube placed 4 m ahead of the camera at [0.5, 5.63, 4.4]
+[guest   0.22s] collision query 1: 4646 triangles within 16 m of [0.5, 4.0, 0.5]
+[guest   0.22s] cube stands on the host's ground at y 4.00
+[guest   1.00s] got 59 cameras; sent 59 poses, 57 frames (render 0.3 ms each); focus with the host
+[guest   2.00s] got 60 cameras; sent 60 poses, 60 frames (render 0.2 ms each); focus with the host
+[guest   2.01s] asking the host for input focus
+[guest   3.00s] got 60 cameras; sent 60 poses, 60 frames (render 0.2 ms each); focus with the host
+[guest   4.00s] got 60 cameras; sent 60 poses, 60 frames (render 0.2 ms each); focus with the host
+[guest   5.00s] got 60 cameras; sent 60 poses, 60 frames (render 0.2 ms each); focus with the host
+[guest   5.72s] collision query 2: 4646 triangles within 16 m of [0.5, 4.0, 0.5]
+[guest   6.00s] got 59 cameras; sent 59 poses, 59 frames (render 0.2 ms each); focus with the host
+[guest   7.00s] got 53 cameras; sent 53 poses, 53 frames (render 0.2 ms each); focus with the host
+[guest   7.22s] collision query 3: 4682 triangles within 16 m of [0.5, 4.0, 0.5]
+[guest   8.00s] got 60 cameras; sent 60 poses, 60 frames (render 0.2 ms each); focus with the host
+[guest   9.00s] got 60 cameras; sent 60 poses, 60 frames (render 0.2 ms each); focus with the host
+[guest  10.00s] got 59 cameras; sent 59 poses, 59 frames (render 0.3 ms each); focus with the host
+[guest  11.00s] got 58 cameras; sent 58 poses, 58 frames (render 0.3 ms each); focus with the host
+[guest  12.00s] got 55 cameras; sent 55 poses, 55 frames (render 0.3 ms each); focus with the host
+[guest  12.29s] collision query 4: 4682 triangles within 16 m of [0.5, 4.0, 0.5]
+[guest  13.00s] got 60 cameras; sent 60 poses, 60 frames (render 0.2 ms each); focus with the host
+[guest  14.00s] got 60 cameras; sent 60 poses, 60 frames (render 0.3 ms each); focus with the host
+[guest  15.00s] got 58 cameras; sent 58 poses, 58 frames (render 0.3 ms each); focus with the host
+[guest  16.00s] got 60 cameras; sent 60 poses, 60 frames (render 0.3 ms each); focus with the host
+[guest  17.00s] got 60 cameras; sent 60 poses, 60 frames (render 0.3 ms each); focus with the host
+[guest  17.39s] collision query 5: 4682 triangles within 16 m of [0.5, 4.0, 0.5]
+[guest  18.00s] got 58 cameras; sent 58 poses, 58 frames (render 0.3 ms each); focus with the host
+[guest  18.59s] LOST the host: peer said bye: closing
+
+# the mod's own log lines
+[16:02:24] [RFB-Main/INFO] [GTNHMixins]: Loading [mixins.hodgepodge.early.json] minecraft.MixinEntityLivingBase_FixPotionException
+[16:02:31] [Client thread/INFO] [minecraft-link]: autotest: 48 lines from .../scripts/host-1710-l3.txt, screenshots to .../1.7.10-lwjgl3ify
+[16:02:31] [Client thread/INFO] [minecraft-link]: Minecraft Link loaded; commands: /link host, /link guest, /link stop, /link status, /link focus <host|guest>
+[16:02:44] [Client thread/INFO] [minecraft-link]: autotest: /gamerule doDaylightCycle false
+[16:02:44] [Client thread/INFO] [minecraft-link]: autotest: /time set 6000
+[16:02:44] [Client thread/INFO] [minecraft-link]: autotest: /weather clear
+[16:02:44] [Client thread/INFO] [minecraft-link]: autotest: /tp @p 0.5 4 0.5
+[16:02:44] [Client thread/INFO] [minecraft-link]: autotest: /setblock 6 4 5 minecraft:stone_stairs 0
+[16:02:44] [Client thread/INFO] [minecraft-link]: autotest: /setblock 7 4 5 minecraft:stone_slab 0
+[16:02:44] [Client thread/INFO] [minecraft-link]: autotest: /setblock 8 4 5 minecraft:fence
+[16:02:44] [Client thread/INFO] [minecraft-link]: autotest: /setblock 9 4 5 minecraft:cobblestone_wall
+[16:02:46] [Client thread/INFO] [minecraft-link]: autotest: EXTSHOT 20-host-before-link
+[16:02:48] [Client thread/INFO] [minecraft-link]: autotest: /link host 47859
+[16:02:48] [Client thread/INFO] [minecraft-link]: link started: host on 127.0.0.1:47859, waiting for a guest; sent 0 cameras, 0 collision snapshots (0 triangles); received 0 poses, 0 frames; 0 guest entities; datagrams in/out 0/0, malformed 0, stale 0, foreign 0
+[16:02:48] [Client thread/INFO] [minecraft-link]: /link: link host on 127.0.0.1:47859, waiting for a guest; sent 0 cameras, 0 collision snapshots (0 triangles); received 0 poses, 0 frames; 0 guest entities; datagrams in/out 0/0, malformed 0, stale 0, foreign 0
+[16:02:48] [Client thread/INFO] [minecraft-link]: autotest: START_PEER
+[16:02:48] [minecraft-link-frames/INFO] [minecraft-link]: pixel file /tmp/rewrite-bridge-92009-guest-06a30c6c-0.frames mapped: 320x240, 3 slots, depth plane: true
+[16:02:48] [Client thread/INFO] [minecraft-link]: showing guest entity 1 (Fake Guest demo/cube) as a placeholder cube
+[16:02:48] [Client thread/INFO] [minecraft-link]: connected to Fake Guest (guest, protocol v1)
+[16:02:48] [Client thread/INFO] [minecraft-link]: guest spawned entity 1 (Fake Guest demo/cube)
+[16:02:48] [Client thread/INFO] [minecraft-link]: peer announced a pixel file: /tmp/rewrite-bridge-92009-guest-06a30c6c-0.frames 320x240
+[16:02:49] [Client thread/INFO] [minecraft-link]: collision shape of minecraft:stone_stairs (BlockStairs) at 6 4 5: [[0.0, 0.0, 0.0, 1.0, 0.5, 1.0], [0.5, 0.5, 0.0, 1.0, 1.0, 1.0]]
+[16:02:49] [Client thread/INFO] [minecraft-link]: collision shape of minecraft:stone_slab (BlockStoneSlab) at 7 4 5: [[0.0, 0.0, 0.0, 1.0, 0.5, 1.0]]
+[16:02:49] [Client thread/INFO] [minecraft-link]: collision shape of minecraft:fence (BlockFence) at 8 4 5: [[0.375, 0.0, 0.375, 0.625, 1.5, 0.625]]
+[16:02:49] [Client thread/INFO] [minecraft-link]: collision shape of minecraft:cobblestone_wall (BlockWall) at 9 4 5: [[0.25, 0.0, 0.25, 0.75, 1.5, 0.75]]
+[16:02:49] [Client thread/INFO] [minecraft-link]: OpenGL: GL_VERSION 2.1 Metal - 90.5, GLSL 1.20, renderer Apple M5, vendor Apple, ARB_texture_float true, ARB_depth_texture true
+[16:02:49] [Client thread/INFO] [minecraft-link]: frame program linked (GLSL 1.20)
+[16:02:49] [Client thread/INFO] [minecraft-link]: first guest frame drawn: framebuffer 1708x960, bound framebuffer object 1, viewport 1708x960
+[16:02:50] [Client thread/INFO] [minecraft-link]: the guest asks for the input focus (/link focus guest to give it)
+[16:02:53] [Client thread/INFO] [minecraft-link]: autotest: EXTSHOT 21-host-cube
+[16:02:55] [Client thread/INFO] [minecraft-link]: autotest: screenshot .../1.7.10-lwjgl3ify/21-host-cube-fbo.png
+[16:02:55] [Client thread/INFO] [minecraft-link]: autotest: /setblock -3 4 2 minecraft:stone
+[16:02:55] [Client thread/INFO] [minecraft-link]: autotest: /setblock -2 4 2 minecraft:stone
+[16:02:55] [Client thread/INFO] [minecraft-link]: autotest: /setblock -1 4 2 minecraft:stone
+[16:02:55] [Client thread/INFO] [minecraft-link]: autotest: /setblock 0 4 2 minecraft:stone
+[16:02:55] [Client thread/INFO] [minecraft-link]: autotest: /setblock 1 4 2 minecraft:stone
+[16:02:55] [Client thread/INFO] [minecraft-link]: autotest: /setblock 2 4 2 minecraft:stone
+[16:02:55] [Client thread/INFO] [minecraft-link]: autotest: /setblock 3 4 2 minecraft:stone
+[16:02:55] [Client thread/INFO] [minecraft-link]: autotest: /setblock 4 4 2 minecraft:stone
+[16:02:59] [Client thread/INFO] [minecraft-link]: autotest: EXTSHOT 22-host-wall
+[16:03:00] [Client thread/INFO] [minecraft-link]: autotest: screenshot .../1.7.10-lwjgl3ify/22-host-wall-fbo.png
+[16:03:03] [Client thread/INFO] [minecraft-link]: autotest: EXTSHOT 23-host-turned
+[16:03:05] [Client thread/INFO] [minecraft-link]: autotest: player feet at 0.5 4.0 0.5 (eye y 5.620000004768372); last camera sent at 0.542 5.629 0.410; yaw 25.0 pitch 5.0; block below: Grass Block
+[16:03:05] [Client thread/INFO] [minecraft-link]: autotest: /link status
+[16:03:05] [Client thread/INFO] [minecraft-link]: /link: host on 127.0.0.1:47859, connected to Fake Guest (session 6a30c6c), input focus with the host; sent 970 cameras, 4 collision snapshots (4682 triangles); received 970 poses, 968 frames; 1 guest entities; datagrams in/out 2004/1120, malformed 0, stale 0, foreign 0; frames drawn 965, reprojected 1687 (pixel file 320x240 with depth), host depth convention 0, camera
+[16:03:05] [Client thread/INFO] [minecraft-link]: autotest: EXTSHOT 24-host-status
+[16:03:07] [Client thread/INFO] [minecraft-link]: autotest: /link stop
+[16:03:07] [Client thread/INFO] [minecraft-link]: /link: stopping the link (bye, then half-close)
+[16:03:07] [minecraft-link-close/INFO] [minecraft-link]: link closed (1094 cameras, 5 collision snapshots, 0 poses sent)
+[16:03:09] [Client thread/INFO] [minecraft-link]: autotest: done, closing the game
+
+# the stack the game started with
+[16:02:22] [RFB-Main/INFO] [LaunchWrapper]: Constructed RFB plugin gtnhextlib@${version} (GTNHExtLib): com.gtnewhorizons.gtnhextlib.core.rfb.GTNHExtLibRfbPlugin
+[16:02:22] [RFB-Main/INFO] [LaunchWrapper]: Constructed RFB plugin gtnhlib@0.11.48 (GTNHLib): com.gtnewhorizon.gtnhlib.core.rfb.GTNHLibRfbPlugin
+[16:02:22] [RFB-Main/INFO] [LaunchWrapper]: Constructed RFB plugin hodgepodge@2.7.206 (Hodgepodge): com.mitchej123.hodgepodge.core.rfb.HodgepodgeRfbPlugin
+[16:02:22] [RFB-Main/INFO] [LaunchWrapper]: Constructed RFB plugin java@25.0.4.1 (Java): com.gtnewhorizons.rfbplugins.compat.DummyJavaPlugin
+[16:02:22] [RFB-Main/INFO] [LaunchWrapper]: Constructed RFB plugin lwjgl3ify@3.0.33 (LWJGL3ify): me.eigenraven.lwjgl3ify.rfb.Lwjgl3ifyRfbPlugin
+[16:02:22] [RFB-Main/INFO] [LaunchWrapper]: Constructed RFB plugin rfb@1.1.1 (RetroFuturaBootstrap): com.gtnewhorizons.rfbplugins.compat.DummyRfbPlugin
+[16:02:22] [RFB-Main/INFO] [LaunchWrapper]: Constructed RFB plugin rfb-asm-safety@1.1.1 (RFB ASM Safety): com.gtnewhorizons.rfbplugins.compat.AsmSafetyPlugin
+[16:02:22] [RFB-Main/INFO] [LaunchWrapper]: Constructed RFB plugin rfb-modern-java@1.1.1 (RFB modern Java compatibility plugin): com.gtnewhorizons.rfbplugins.compat.ModernJavaCompatibilityPlugin
+[16:02:22] [RFB-Main/INFO] [mixin]: SpongePowered MIXIN Subsystem Version=0.8.7 Source=file:~/.gradle/caches/modules-2/files-2.1/io.github.legacymoddingmc/unimixins/0.3.1/d31b8111844e4899
+[16:02:22] [RFB-Main/INFO] [FML]: Java is OpenJDK 64-Bit Server VM, version 25.0.4.1, running on Mac OS X:aarch64:26.6.2, installed at ~/.gradle/jdks/azul_systems__inc_-25-aarch64-os_x.2/

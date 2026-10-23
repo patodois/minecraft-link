@@ -67,7 +67,29 @@ public final class PoseTrack {
     }
 
     /** Resolved state of one entity. */
-    public record Sample(double[] translation, float[] rotation, float[] scale) {}
+    public static final class Sample {
+        private final double[] translation;
+        private final float[] rotation;
+        private final float[] scale;
+
+        public Sample(double[] translation, float[] rotation, float[] scale) {
+            this.translation = translation;
+            this.rotation = rotation;
+            this.scale = scale;
+        }
+
+        public double[] translation() {
+            return translation;
+        }
+
+        public float[] rotation() {
+            return rotation;
+        }
+
+        public float[] scale() {
+            return scale;
+        }
+    }
 
     private static Sample of(Wire.Pose p, double extrapolateSeconds) {
         float[] t = p.translation(), v = p.velocity();

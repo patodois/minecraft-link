@@ -1,0 +1,53 @@
+# runObfClient (the reobfuscated release jar): the mod's own log lines
+java.io.FileNotFoundException: ~/minecraft-link-1.7.10/run/obfuscated/config/splash.properties (No such file or directory)
+[15:57:48] [Client thread/INFO] [minecraft-link]: autotest: 48 lines from .../scripts/host-1710-obf.txt, screenshots to .../1.7.10
+[15:57:48] [Client thread/INFO] [minecraft-link]: Minecraft Link loaded; commands: /link host, /link guest, /link stop, /link status, /link focus <host|guest>
+Exception in thread "Thread-8" [15:57:49] [Thread-8/INFO] [STDERR]: [java.lang.Throwable$WrappedPrintStream:println:749]: 	at org.lwjgl.openal.AL.create(AL.java:113)
+[15:58:00] [Client thread/INFO] [minecraft-link]: autotest: /gamerule doDaylightCycle false
+[15:58:00] [Client thread/INFO] [minecraft-link]: autotest: /time set 6000
+[15:58:00] [Client thread/INFO] [minecraft-link]: autotest: /weather clear
+[15:58:00] [Client thread/INFO] [minecraft-link]: autotest: /tp @p 0.5 4 0.5
+[15:58:00] [Client thread/INFO] [minecraft-link]: autotest: /setblock 6 4 5 minecraft:stone_stairs 0
+[15:58:00] [Client thread/INFO] [minecraft-link]: autotest: /setblock 7 4 5 minecraft:stone_slab 0
+[15:58:00] [Client thread/INFO] [minecraft-link]: autotest: /setblock 8 4 5 minecraft:fence
+[15:58:00] [Client thread/INFO] [minecraft-link]: autotest: /setblock 9 4 5 minecraft:cobblestone_wall
+[15:58:03] [Client thread/INFO] [minecraft-link]: autotest: EXTSHOT 20-host-before-link
+[15:58:05] [Client thread/INFO] [minecraft-link]: autotest: /link host 47858
+[15:58:05] [Client thread/INFO] [minecraft-link]: link started: host on 127.0.0.1:47858, waiting for a guest; sent 0 cameras, 0 collision snapshots (0 triangles); received 0 poses, 0 frames; 0 guest entities; datagrams in/out 0/0, malformed 0, stale 0, foreign 0
+[15:58:05] [Client thread/INFO] [minecraft-link]: /link: link host on 127.0.0.1:47858, waiting for a guest; sent 0 cameras, 0 collision snapshots (0 triangles); received 0 poses, 0 frames; 0 guest entities; datagrams in/out 0/0, malformed 0, stale 0, foreign 0
+[15:58:05] [Client thread/INFO] [minecraft-link]: autotest: START_PEER
+[15:58:05] [minecraft-link-frames/INFO] [minecraft-link]: pixel file /tmp/rewrite-bridge-87404-guest-4a4e5aa7-0.frames mapped: 320x240, 3 slots, depth plane: true
+[15:58:05] [Client thread/INFO] [minecraft-link]: connected to Fake Guest (guest, protocol v1)
+[15:58:05] [Client thread/INFO] [minecraft-link]: guest spawned entity 1 (Fake Guest demo/cube)
+[15:58:05] [Client thread/INFO] [minecraft-link]: peer announced a pixel file: /tmp/rewrite-bridge-87404-guest-4a4e5aa7-0.frames 320x240
+[15:58:05] [Client thread/INFO] [minecraft-link]: showing guest entity 1 (Fake Guest demo/cube) as a placeholder cube
+[15:58:05] [Client thread/INFO] [minecraft-link]: collision shape of minecraft:stone_stairs (BlockStairs) at 6 4 5: [[0.0, 0.0, 0.0, 1.0, 0.5, 1.0], [0.5, 0.5, 0.0, 1.0, 1.0, 1.0]]
+[15:58:05] [Client thread/INFO] [minecraft-link]: collision shape of minecraft:stone_slab (BlockStoneSlab) at 7 4 5: [[0.0, 0.0, 0.0, 1.0, 0.5, 1.0]]
+[15:58:05] [Client thread/INFO] [minecraft-link]: collision shape of minecraft:fence (BlockFence) at 8 4 5: [[0.375, 0.0, 0.375, 0.625, 1.5, 0.625]]
+[15:58:05] [Client thread/INFO] [minecraft-link]: collision shape of minecraft:cobblestone_wall (BlockWall) at 9 4 5: [[0.25, 0.0, 0.25, 0.75, 1.5, 0.75]]
+[15:58:05] [Client thread/INFO] [minecraft-link]: OpenGL: GL_VERSION 2.1 Metal - 90.5, GLSL 1.20, renderer Apple M5, vendor Apple, ARB_texture_float true, ARB_depth_texture true
+[15:58:05] [Client thread/INFO] [minecraft-link]: frame program linked (GLSL 1.20)
+[15:58:05] [Client thread/INFO] [minecraft-link]: first guest frame drawn: framebuffer 854x480, bound framebuffer object 1, viewport 854x480
+[15:58:07] [Client thread/INFO] [minecraft-link]: the guest asks for the input focus (/link focus guest to give it)
+[15:58:10] [Client thread/INFO] [minecraft-link]: autotest: EXTSHOT 21-host-cube
+[15:58:11] [Client thread/INFO] [minecraft-link]: autotest: screenshot .../1.7.10/21-host-cube-fbo.png
+[15:58:12] [Client thread/INFO] [minecraft-link]: autotest: /setblock -3 4 2 minecraft:stone
+[15:58:12] [Client thread/INFO] [minecraft-link]: autotest: /setblock -2 4 2 minecraft:stone
+[15:58:12] [Client thread/INFO] [minecraft-link]: autotest: /setblock -1 4 2 minecraft:stone
+[15:58:12] [Client thread/INFO] [minecraft-link]: autotest: /setblock 0 4 2 minecraft:stone
+[15:58:12] [Client thread/INFO] [minecraft-link]: autotest: /setblock 1 4 2 minecraft:stone
+[15:58:12] [Client thread/INFO] [minecraft-link]: autotest: /setblock 2 4 2 minecraft:stone
+[15:58:12] [Client thread/INFO] [minecraft-link]: autotest: /setblock 3 4 2 minecraft:stone
+[15:58:12] [Client thread/INFO] [minecraft-link]: autotest: /setblock 4 4 2 minecraft:stone
+[15:58:15] [Client thread/INFO] [minecraft-link]: autotest: EXTSHOT 22-host-wall
+[15:58:17] [Client thread/INFO] [minecraft-link]: autotest: screenshot .../1.7.10/22-host-wall-fbo.png
+[15:58:19] [Client thread/INFO] [minecraft-link]: autotest: EXTSHOT 23-host-turned
+[15:58:22] [Client thread/INFO] [minecraft-link]: autotest: player feet at 0.5 4.0 0.5 (eye y 5.620000004768372); last camera sent at 0.542 5.629 0.410; yaw 25.0 pitch 5.0; block below: Grass Block
+[15:58:22] [Client thread/INFO] [minecraft-link]: autotest: /link status
+[15:58:22] [Client thread/INFO] [minecraft-link]: /link: host on 127.0.0.1:47858, connected to Fake Guest (session 4a4e5aa7), input focus with the host; sent 1970 cameras, 4 collision snapshots (4682 triangles); received 1954 poses, 1949 frames; 1 guest entities; datagrams in/out 3970/2121, malformed 0, stale 0, foreign 0; frames drawn 1969, reprojected 3303 (pixel file 320x240 with depth), host depth convention 0, c
+[15:58:22] [Client thread/INFO] [minecraft-link]: autotest: EXTSHOT 24-host-status
+[15:58:24] [Client thread/INFO] [minecraft-link]: autotest: /link stop
+[15:58:24] [Client thread/INFO] [minecraft-link]: /link: stopping the link (bye, then half-close)
+[15:58:24] [minecraft-link-close/INFO] [minecraft-link]: link closed (2220 cameras, 5 collision snapshots, 0 poses sent)
+[15:58:26] [Client thread/INFO] [minecraft-link]: autotest: done, closing the game
+Exception in thread "Client Shutdown Thread" 

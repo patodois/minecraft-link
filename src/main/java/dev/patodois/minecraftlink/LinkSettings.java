@@ -7,6 +7,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
+import com.google.gson.JsonPrimitive;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -52,7 +53,7 @@ public final class LinkSettings {
 
     public static LinkSettings parse(String json) throws JsonParseException {
         LinkSettings s = new LinkSettings();
-        JsonObject o = JsonParser.parseString(json).getAsJsonObject();
+        JsonObject o = new JsonParser().parse(json).getAsJsonObject();
         s.role = str(o, "role", s.role).toLowerCase(java.util.Locale.ROOT);
         if (!s.role.equals("host") && !s.role.equals("guest")) throw new JsonParseException("role must be host or guest");
         s.port = intIn(o, "port", s.port, 1, 65535);
@@ -88,7 +89,7 @@ public final class LinkSettings {
         o.addProperty("flip_z", flipZ);
         o.addProperty("scale", scale);
         JsonArray off = new JsonArray();
-        for (double d : offset) off.add(d);
+        for (double d : offset) off.add(new JsonPrimitive(d));
         o.add("offset", off);
         o.addProperty("interp_delay_ms", interpDelayMs);
         o.addProperty("collision_radius", collisionRadius);
@@ -108,10 +109,10 @@ public final class LinkSettings {
         try {
             if (!Files.exists(file)) {
                 Files.createDirectories(file.getParent());
-                Files.writeString(file, new LinkSettings().toJson(), StandardCharsets.UTF_8);
+                Files.write(file, new LinkSettings().toJson().getBytes(StandardCharsets.UTF_8));
                 return new LinkSettings();
             }
-            return parse(Files.readString(file, StandardCharsets.UTF_8));
+            return parse(new String(Files.readAllBytes(file), StandardCharsets.UTF_8));
         } catch (IOException | RuntimeException e) {
             warn.accept("could not use " + file + ": " + e.getMessage() + "; using the defaults");
             return new LinkSettings();
