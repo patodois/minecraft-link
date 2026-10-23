@@ -72,7 +72,8 @@ public final class LinkManager {
     private void finish(Session s, boolean wait) {
         inputGate.release();
         remoteEntities.discardAll(s);
-        frames.close(); // the textures and buffers go on the next frame (releaseIfNeeded), on the render thread
+        frames.close();
+        if (!wait) frames.releaseIfNeeded(); // on the game thread (the render thread): the textures go now; otherwise on the next frame
         scanner.release(); // do not keep the ClientLevel, the shape cache or a half-done scan
         Thread t = new Thread(() -> {
             s.closeBlocking();
