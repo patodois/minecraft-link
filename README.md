@@ -256,7 +256,7 @@ Before every `runClient`, `runObfClient` and `runVanillaClient` launch the build
 Unit tests (JUnit 5, plain Java 8): the coordinate mapping, camera matrix conversion (view, the depth conventions,
 rewriting, linear depth, near and far from a `gluPerspective` matrix, the camera position of a view), collision
 triangles for a full block, a slab and stairs from hand-written boxes and from the bounds of real Minecraft `Block`
-objects, pose interpolation, reprojection, the camera ring and the settings file. It also runs the guest role (a `Session`) against a link-java host in-process: `spawn` arrives before the first pose, `despawn` on stop, and the host ignores no pose. With `RUST_FAKE_HOST_PORT=<port>` set it runs the same `Session` as a guest of the Rust `fake_host --port <port>` instead (the evidence is that host's log). Minecraft 1.7.10's registries cannot
+objects, pose interpolation, reprojection, the camera ring and the settings file. It also runs the guest role (a `Session`) against a link-java host in-process: `spawn` arrives before the first pose, `despawn` on stop, and the host ignores no pose. With `RUST_FAKE_HOST_PORT=<port>` set it runs the same `Session` as a guest of the Rust `fake_host --port <port>` instead (the evidence is that host's log), and with `RUST_FAKE_GUEST_PORT=<port>` as the host of a `fake_guest --port <port>` you started. Minecraft 1.7.10's registries cannot
 be bootstrapped in a plain unit test (Forge Mod Loader needs its own class loader), so the shapes of the registered
 stairs, slab, fence and wall are checked in the game instead (their boxes are in `docs/test-logs`). The tests use JOML as
 a test-only reference for matrices; it is not in the jar.

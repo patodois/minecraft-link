@@ -109,4 +109,30 @@ class GuestSessionTest {
             s.closeBlocking();
         }
     }
+
+    /**
+     * Only when RUST_FAKE_GUEST_PORT is set (a manual interop run): the same Session as the host of the Rust reference guest
+     * ({@code fake_guest --port N}, started by the person running this). Passing means the guest's poses were accepted: the guest
+     * spawned its entity first, the host knows it, and no pose was ignored (the evidence is also the guest's own log).
+     */
+    @org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable(named = "RUST_FAKE_GUEST_PORT", matches = "[0-9]+")
+    @Test
+    void theHostSessionAgainstTheRustFakeGuest() throws Exception {
+        LinkSettings settings = new LinkSettings();
+        settings.port = Integer.parseInt(System.getenv("RUST_FAKE_GUEST_PORT"));
+        Session s = Session.open(Role.HOST, settings, "interop");
+        try {
+            long end = System.currentTimeMillis() + 20000;
+            while (System.currentTimeMillis() < end && s.posesReceived.get() < 40) {
+                // the reference guest renders (and sends its poses) for the cameras it receives
+                if (s.isConnected()) s.offerCamera(Wire.Camera.lookAt(new float[] {0, 1, 0}, new float[] {0, 1, -1}, (float) Math.toRadians(70), 0.1f, 100f, 640, 360));
+                Thread.sleep(20);
+            }
+            assertTrue(s.posesReceived.get() >= 40, "poses of the Rust guest were accepted: " + s.posesReceived.get());
+            assertTrue(!s.remotes.isEmpty(), "the guest's entity is known to the host");
+            assertEquals(0, s.link.unknownEntity, "no pose was ignored");
+        } finally {
+            s.closeBlocking();
+        }
+    }
 }
