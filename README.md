@@ -4,7 +4,7 @@
 
 A client-side [Forge](https://files.minecraftforge.net) mod for Minecraft: Java Edition **1.7.10** (the version
 GregTech: New Horizons and the big tech modpacks of that era run on) that speaks the **rewrite-bridge passthrough link
-protocol v1** (`docs/CONTRACT.md` in the `rewrite-bridge` repository, revision 3), so a running Minecraft can be a
+protocol v1** (`docs/CONTRACT.md` in the [`rewrite-bridge`](https://github.com/patodois/rewrite-bridge) repository, revision 4), so a running Minecraft can be a
 **host** or a **guest** next to any other game or rewrite that speaks it: the Rust tools, the Hytale plugin, anything
 else.
 
@@ -15,7 +15,7 @@ else.
   movement keys over when the host holds the input focus.
 
 This is the 1.7.10 port of the Fabric mod for 26.3 (branch `main` and commit `7b25351`). The protocol implementation is
-[`link-java`](../link-java) (pure Java, Java 8 bytecode, tested against the Rust reference peers); it is merged into
+[`link-java`](https://github.com/patodois/link-java) (pure Java, Java 8 bytecode, tested against the Rust reference peers); it is merged into
 the mod jar. Everything binds and connects to `127.0.0.1` only. There is a sibling branch for 1.12.2.
 
 ## What this mod is not
@@ -57,9 +57,15 @@ build. [lwjgl3ify](https://github.com/GTNewHorizons/lwjgl3ify), [Hodgepodge](htt
 and [UniMixins](https://github.com/LegacyModdingMC/UniMixins) are used only to test (below); the mod does not depend on
 them.
 
+## Other Minecraft versions
+
+This branch is Minecraft 1.7.10 only. The mod for 26.3 (`main`), 1.20.1 (`mc/1.20.1`) and 1.12.2 (`mc/1.12.2`) have their own branches, and 1.2.5 is coming:
+see the table in the [main README](https://github.com/patodois/minecraft-link#minecraft-versions-branches-and-loaders).
+
 ## Install
 
-Build the jar (below) or take `minecraft-link-1.7.10-0.1.0.jar`.
+Build the jar (below): `build/libs/minecraft-link-forge-1.7.10-0.1.0.jar`. Use exactly that one, the file without a suffix: not the `-dev` jar, which is
+the deobfuscated one for development runs and does not load in a real game (the one exception is the lwjgl3ify test below, which wants it).
 
 1. In Prism Launcher make (or use) an instance for **Minecraft 1.7.10 with Forge** (10.13.4.1614, Prism's Edit
    Instance > Version > Install Forge). Java 8, or the modern-Java setup of a GTNH instance (lwjgl3ify).
@@ -82,6 +88,16 @@ Build the jar (below) or take `minecraft-link-1.7.10-0.1.0.jar`.
 The commands are Forge client commands (`ClientCommandHandler`): they run in your client and the text is never sent to
 a server. Leaving the world and quitting the game close the link the same way (`despawn` for a guest, then `bye`,
 then the half-close of CONTRACT 6.1).
+
+**To see it work without a second game**, build the Rust reference peers once (they need a [Rust toolchain](https://rustup.rs)):
+
+```sh
+git clone https://github.com/patodois/rewrite-bridge && cd rewrite-bridge && cargo build --release --features link --examples
+```
+
+Join a Superflat world, run `/link host`, and start `target/release/examples/fake_guest --frames --in-front` in that directory: a cube appears 4 m ahead,
+on the ground you stand on, and a wall between you and it hides the part behind it. For the other direction run `target/release/examples/fake_host --port 47831`
+and `/link guest 47831` in the game: the host prints the player's poses.
 
 ### `config/minecraft-link.json`
 
@@ -110,8 +126,9 @@ Written with the defaults on first start. Unknown keys are ignored.
 ```
 
 (The file is plain JSON; the `//` notes above are only for this page.) `offset` is how the two worlds are lined up:
-the flat test world's ground is at y = 4, a Rust guest's ground is y = 0, so a guest that should stand on that ground
-may want `"offset": [0, -4, 0]`.
+the ground of a 1.7.10 Superflat world (and of the flat world the scripted runs create) is at y = 4, and a Rust guest's ground is y = 0, so a guest
+that should stand on that ground may want `"offset": [0, -4, 0]`. (The pages of the 26.3 and 1.20.1 branches say y = -60 for Superflat: worlds
+reach down to y = -64 since 1.18, and the flat ground moved down with them.)
 
 ## Coordinates (CONTRACT section 4)
 
@@ -176,7 +193,7 @@ is sent to a server or saved) and is hidden while a guest's frames are on screen
 1. `frame_channel` names the pixel file; the frame worker maps it read-only (`PixelFile.Reader` in link-java: all
    header and depth checks of the contract, the seqlock).
 2. On each `Frame` it copies the slot (colour and linear depth in metres), looks `camera_seq` up in a ring of the last
-   64 cameras sent and reprojects the frame to the camera being presented now (`Reproject`, on a helper thread).
+   256 cameras sent (a second at 240 fps; the contract asks for half a second) and reprojects the frame to the camera being presented now (`Reproject`, on a helper thread).
 3. At `RenderWorldLastEvent` the render thread uploads the result to an RGBA8 texture and a 32-bit float texture
    (`GL_LUMINANCE32F_ARB`), copies the game's **depth buffer** into a `GL_DEPTH_COMPONENT24` texture with
    `glCopyTexSubImage2D` (from the bound framebuffer, which is `Minecraft.getFramebuffer()` in an unmodified game), and
@@ -211,15 +228,18 @@ is sent to a server or saved) and is hidden while a guest's frames are on screen
 
 ## Build and test
 
-Needs a JDK 17 or newer for Gradle itself (the build was run with JDK 25); the game and the mod compile with a
+You need git and a **JDK 25** to run Gradle (see "Which JDK"); the game and the mod compile with a
 **Java 8** toolchain that Gradle downloads (Azul Zulu, which has macOS arm64 builds). The toolchain is
 [RetroFuturaGradle](https://github.com/GTNewHorizons/RetroFuturaGradle) 2.0.6 with Gradle 9.8.2, Minecraft 1.7.10,
 Forge 10.13.4.1614, MCP stable_12.
 
 ```sh
-export JAVA_HOME=/opt/homebrew/opt/openjdk@25
-./gradlew build --no-daemon          # build/libs/minecraft-link-1.7.10-0.1.0.jar (reobfuscated, link-java merged in), runs the tests
-./gradlew test --no-daemon           # 41 unit tests, no game needed
+git clone https://github.com/patodois/link-java                  # the protocol library, a sibling directory of minecraft-link
+git clone -b mc/1.7.10 https://github.com/patodois/minecraft-link
+cd minecraft-link
+export JAVA_HOME=/opt/homebrew/opt/openjdk@25                    # or any JDK 25
+./gradlew build --no-daemon          # build/libs/minecraft-link-forge-1.7.10-0.1.0.jar (reobfuscated, link-java merged in), runs the tests
+./gradlew test --no-daemon           # 51 unit tests, no game needed
 ./gradlew runClient --no-daemon      # the real client, deobfuscated dev environment, offline dev account, -Xmx1500m
 ./gradlew runObfClient --no-daemon   # the real client with the reobfuscated release jar, as a player's game runs it
 ```
@@ -240,6 +260,14 @@ objects, pose interpolation, reprojection, the camera ring and the settings file
 be bootstrapped in a plain unit test (Forge Mod Loader needs its own class loader), so the shapes of the registered
 stairs, slab, fence and wall are checked in the game instead (their boxes are in `docs/test-logs`). The tests use JOML as
 a test-only reference for matrices; it is not in the jar.
+
+### Which JDK
+
+One rule for every branch of this repository: **run Gradle with a JDK 25.** RetroFuturaGradle 2.0.6 is compiled for Java 25 and fails on a JDK 21 with
+`UnsupportedClassVersionError ... class file version 69.0` (checked on the 1.12.2 branch with Temurin 21.0.12; the build files are the same), and the same JDK 25
+runs the builds of the other branches. The game and the mod are Java 8, but you do not install that: the Gradle toolchain download provides it.
+
+Verified here: the whole build, the unit tests and the jar with Homebrew `openjdk@25` 25.0.5. Not tried: JDK 26 or newer.
 
 ### Scripted client runs
 
@@ -264,7 +292,7 @@ provides.
 
 To test, copy [ExampleMod1.7.10](https://github.com/GTNewHorizons/ExampleMod1.7.10) somewhere, put the `-dev.jar`
 that `./gradlew build` leaves in `build/libs` into its `libs/`, add
-`runtimeOnlyNonPublishable(files("libs/minecraft-link-1.7.10-0.1.0-dev.jar"))` to its `dependencies.gradle`, and run its
+`runtimeOnlyNonPublishable(files("libs/minecraft-link-forge-1.7.10-0.1.0-dev.jar"))` to its `dependencies.gradle`, and run its
 `./gradlew runClient25` (or `runClient21`, `runClient17`; GTNHGradle's tasks for lwjgl3ify, Hodgepodge and UniMixins).
 The result of that test is below. In this repository's own builds nothing of this is configured.
 
@@ -295,10 +323,32 @@ Logs of the runs are in `docs/test-logs/`. Screenshots are not committed (they s
   handled: the pass copies whatever is bound when `RenderWorldLastEvent` fires. Not tested inside the full GTNH pack.
 - Guest entities are a placeholder cube (heading only, no roll, no model); the guest's own frames show the real model.
 - Reprojection is on the CPU and meant for guest images of a few hundred thousand pixels; cracks can appear on
-  stretched surfaces.
+  stretched surfaces. A pixel file of more than 4 Mpixels (2560 x 1600) is refused with a note in `/link status`, although the contract
+  allows 2^26 pixels.
+- Guest frames that stop arriving are cleared after a second and the placeholder cube comes back; the textures are released when the link stops.
 - Block changes are found by rescanning (every 0.5 s by default), not by an event.
 - Mouse and keyboard other than movement stay with Minecraft when the focus is elsewhere.
 - No server-side component: it is a client mod.
+
+## Glossary
+
+| Term | Meaning here |
+|---|---|
+| **host**, **guest** | The two roles of the link. The host is the game you are playing; the guest is a second game or rewrite that adds entities, poses and rendered frames to the host's world. Minecraft can be either. |
+| **link**, **rewrite-bridge**, **CONTRACT** | The protocol between the two programs (TCP for control, UDP for state, a shared file for pixels) and the repository that defines it. `docs/CONTRACT.md` there is the whole specification. |
+| **link-java** | The Java implementation of that protocol, used by this mod. |
+| **pose** | An entity's position, rotation, scale and velocity at a moment, sent every tick. |
+| **link metre** | The unit of the link's shared space. `scale` in the config says how many link metres one block is (default 1). |
+| **`depth_range`** | A field of the camera message that says how the projection stores depth (0 OpenGL, 1 zero-to-one, 2 reversed). |
+| **Forge** | The mod loader of 1.7.10: it starts Minecraft with mods. This branch is a Forge mod, built against Forge 10.13.4.1614. |
+| **RetroFuturaGradle** | The Gradle plugin (by the GTNH community) that downloads, deobfuscates and runs Minecraft and Forge for mod development, including on Apple silicon. |
+| **Gradle, toolchain** | The build tool, and its way of finding (or downloading) the JDK a project asks for, independent of the JDK Gradle itself runs on. |
+| **included build** | A Gradle build that builds another project (here `link-java`) first and then uses its jar; the classes are merged into the mod jar. |
+| **reobfuscated jar, `-dev` jar** | 1.7.10 runs on obfuscated names (SRG). The build compiles against readable names and renames the finished jar; the `-dev` jar keeps the readable names, is for development runs only and does not load in a real game. |
+| **LWJGL 2, lwjgl3ify** | LWJGL 2 is the OpenGL and input library 1.7.10 uses. lwjgl3ify (a GTNH mod) runs it on modern Java with LWJGL 3; the mod works under both. |
+| **dev client, `runClient`, `runObfClient`** | The Minecraft client started from the build with the mod on the class path (`runObfClient`: with the reobfuscated jar, as a player's game runs it), with an offline account, for testing. |
+| **Superflat** | A world type with flat ground. In 1.7.10 the ground is at y = 4 (in 1.18 and later at y = -60). |
+| **`26.3`** | Mojang's version number since 2026: the year (26) and the number of the release in that year (3). The `main` branch is the mod for it. |
 
 ## License
 

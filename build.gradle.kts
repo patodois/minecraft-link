@@ -55,7 +55,7 @@ tasks.processResources {
 }
 
 tasks.jar {
-    archiveBaseName.set("minecraft-link-1.7.10")
+    archiveBaseName.set("minecraft-link-forge-1.7.10") // minecraft-link-<loader>-<minecraft version>-<mod version>.jar
     dependsOn(buildLinkJava)
     from({ zipTree(linkJavaJar) }) {
         exclude("META-INF/MANIFEST.MF", "META-INF/*.SF", "module-info.class")
