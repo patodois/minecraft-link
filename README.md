@@ -239,7 +239,7 @@ git clone -b mc/1.7.10 https://github.com/patodois/minecraft-link
 cd minecraft-link
 export JAVA_HOME=/opt/homebrew/opt/openjdk@25                    # or any JDK 25
 ./gradlew build --no-daemon          # build/libs/minecraft-link-forge-1.7.10-0.1.0.jar (reobfuscated, link-java merged in), runs the tests
-./gradlew test --no-daemon           # 51 unit tests, no game needed
+./gradlew test --no-daemon           # 52 unit tests, no game needed
 ./gradlew runClient --no-daemon      # the real client, deobfuscated dev environment, offline dev account, -Xmx1500m
 ./gradlew runObfClient --no-daemon   # the real client with the reobfuscated release jar, as a player's game runs it
 ```
@@ -256,7 +256,7 @@ Before every `runClient`, `runObfClient` and `runVanillaClient` launch the build
 Unit tests (JUnit 5, plain Java 8): the coordinate mapping, camera matrix conversion (view, the depth conventions,
 rewriting, linear depth, near and far from a `gluPerspective` matrix, the camera position of a view), collision
 triangles for a full block, a slab and stairs from hand-written boxes and from the bounds of real Minecraft `Block`
-objects, pose interpolation, reprojection, the camera ring and the settings file. Minecraft 1.7.10's registries cannot
+objects, pose interpolation, reprojection, the camera ring and the settings file. It also runs the guest role (a `Session`) against a link-java host in-process: `spawn` arrives before the first pose, `despawn` on stop, and the host ignores no pose. Minecraft 1.7.10's registries cannot
 be bootstrapped in a plain unit test (Forge Mod Loader needs its own class loader), so the shapes of the registered
 stairs, slab, fence and wall are checked in the game instead (their boxes are in `docs/test-logs`). The tests use JOML as
 a test-only reference for matrices; it is not in the jar.
