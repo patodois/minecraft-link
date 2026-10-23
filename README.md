@@ -340,12 +340,13 @@ collision triangles for a full block, a slab and stairs, **both from hand-writte
 
 ### Which JDK
 
-One rule: **run Gradle with a JDK 25.** Minecraft 26.3 needs it (Fabric Loom 1.19.3 refuses to start on an older JVM; checked with JDK 21),
-and the game itself runs on Java 25. A JDK 25 also runs the builds of the older branches, so you never need another. Other JDKs that
-Gradle asks for (21 for some ModDevGradle tools) it downloads itself through the toolchain resolver in `settings.gradle`.
+One rule for every branch of this repository: **run Gradle with a JDK 25.** Minecraft 26.3 needs it (Fabric Loom 1.19.3 refuses to start on an older
+JVM: "requires at least JVM runtime version 25", checked with Temurin 21.0.12), and the game itself runs on Java 25. The same JDK 25 runs the builds of
+the older branches, so you never need another: `mc/1.12.2` and `mc/1.7.10` (RetroFuturaGradle 2.0.6 is compiled for Java 25 and fails on 21) and `mc/1.20.1`
+(which also works on 21). Other JDKs that Gradle asks for (21 for some ModDevGradle tools; 17 and 8 on the older branches) it downloads itself through its toolchain resolver.
 
-Verified here: this branch with Homebrew `openjdk@25` 25.0.5 (build, tests and the dev clients of all three loaders). JDK 21 does not work on this
-branch (above); JDK 26 or newer was not tried.
+Verified here, with Homebrew `openjdk@25` 25.0.5: this branch (build, tests and the dev clients of all three loaders) and the build, unit tests and jar
+of `mc/1.20.1`, `mc/1.12.2` and `mc/1.7.10`. Not tried: JDK 26 or newer.
 
 ### Scripted client runs
 
