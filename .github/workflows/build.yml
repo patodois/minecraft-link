@@ -1,0 +1,38 @@
+name: build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      # The protocol library is an included build expected next to this repository (../link-java)
+      - uses: actions/checkout@v4
+        with:
+          path: minecraft-link
+      - uses: actions/checkout@v4
+        with:
+          repository: patodois/link-java
+          path: link-java
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: true
+      # Builds the Minecraft 1.12.2 Forge jar and runs the unit tests (the Java 8 toolchain comes from foojay)
+      - name: Build and test
+        working-directory: minecraft-link
+        run: ./gradlew build --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jar-${{ matrix.os }}
+          path: minecraft-link/build/libs/minecraft-link-1.12.2-*[0-9].jar
+          if-no-files-found: error
