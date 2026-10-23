@@ -1,0 +1,28 @@
+modLoader = "javafml"
+loaderVersion = "[4,)"
+license = "MIT OR Apache-2.0"
+
+[[mods]]
+modId = "${mod_id}"
+version = "${version}"
+displayName = "${mod_name}"
+authors = "patodois"
+description = '''Speaks the rewrite-bridge passthrough link protocol, so Minecraft can be a host or a guest next to another game or rewrite. NOT AN OFFICIAL MINECRAFT PRODUCT. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT.'''
+
+[[mixins]]
+config = "minecraft_link.mixins.json"
+
+# Client only: nothing has to be installed on a server.
+[[dependencies.${mod_id}]]
+modId = "neoforge"
+type = "required"
+versionRange = "[${neoforge_version},)"
+ordering = "NONE"
+side = "CLIENT"
+
+[[dependencies.${mod_id}]]
+modId = "minecraft"
+type = "required"
+versionRange = "[${minecraft_version},26.4)"
+ordering = "NONE"
+side = "CLIENT"

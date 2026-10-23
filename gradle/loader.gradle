@@ -24,6 +24,8 @@ tasks.withType(JavaCompile).configureEach {
 
 java {
 	withSourcesJar()
+	// The only JDK this build uses is the one Gradle runs on (JDK 25); tools that ask for a toolchain get that one.
+	toolchain.languageVersion = JavaLanguageVersion.of(25)
 	sourceCompatibility = JavaVersion.VERSION_25
 	targetCompatibility = JavaVersion.VERSION_25
 }

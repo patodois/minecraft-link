@@ -1,0 +1,48 @@
+plugins {
+	id 'net.neoforged.moddev'
+}
+apply from: rootProject.file('gradle/loader.gradle')
+
+repositories {
+	mavenCentral()
+}
+
+neoForge {
+	version = rootProject.neoforge_version
+
+	runs {
+		client {
+			client()
+			gameDirectory = project.file('run')
+			// The Mac has 16 GB shared with other builds: keep the game small.
+			jvmArguments.add '-Xmx2G'
+			// ModDevGradle starts the game with -Djava.net.preferIPv6Addresses=system, which makes InetAddress.getLoopbackAddress()
+			// (what link-java binds to) ::1 instead of the 127.0.0.1 the protocol requires. Undo that for the dev client.
+			systemProperty 'java.net.preferIPv6Addresses', 'false'
+			// Scripted runs (see AutoTest): ./gradlew :neoforge:runClient -Pautotest=/path/script.txt -Pshots=/path/dir
+			if (project.hasProperty('autotest')) {
+				systemProperty 'minecraftlink.autotest', project.property('autotest')
+				systemProperty 'minecraftlink.shots', project.hasProperty('shots') ? project.property('shots') : 'run/shots'
+			}
+		}
+	}
+
+	mods {
+		"${rootProject.mod_id}" {
+			sourceSet sourceSets.main
+		}
+	}
+}
+
+dependencies {
+	// Vanilla's Mixin annotations are on NeoForge's classpath already; MixinExtras (@Local) too.
+
+	// The passthrough link protocol (pure Java), built from ../link-java and bundled into the jar (jarJar).
+	implementation "dev.patodois:link-java:${rootProject.link_java_version}"
+	jarJar("dev.patodois:link-java") {
+		version {
+			strictly "[${rootProject.link_java_version},)"
+			prefer rootProject.link_java_version
+		}
+	}
+}

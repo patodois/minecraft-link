@@ -56,7 +56,21 @@ public final class LinkManager {
         if (role == Role.HOST && settings.showFrames) frames.start(session);
         guestPublisher.reset();
         LOG.info("link started: {}", session.describe());
-        return "link " + session.describe();
+        String warning = loopbackWarning();
+        if (warning != null) LOG.warn(warning);
+        return "link " + session.describe() + (warning == null ? "" : " [!] " + warning);
+    }
+
+    /**
+     * link-java binds and connects to {@code InetAddress.getLoopbackAddress()}, and the protocol needs 127.0.0.1. A JVM started with
+     * {@code -Djava.net.preferIPv6Addresses=system} (what some loaders' launch profiles pass) makes that {@code ::1}, so the other
+     * program, which uses 127.0.0.1, never finds us. Returns a warning in that case, null otherwise.
+     */
+    static String loopbackWarning() {
+        byte[] a = java.net.InetAddress.getLoopbackAddress().getAddress();
+        if (a.length == 4) return null;
+        return "this JVM's loopback address is " + java.net.InetAddress.getLoopbackAddress().getHostAddress() + ", not 127.0.0.1, so a peer on 127.0.0.1 cannot connect;"
+                + " add -Djava.net.preferIPv6Addresses=false to the game's JVM arguments";
     }
 
     /** Stops the session without blocking the game thread: the bye and the drain happen on a helper thread. */

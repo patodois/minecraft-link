@@ -9,12 +9,19 @@ pluginManagement {
 	}
 }
 
+plugins {
+	// ModDevGradle runs some of its tools on Java 21 and asks Gradle for that toolchain; this lets Gradle fetch it when the
+	// machine has none (the game itself and the mod build with JDK 25).
+	id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
+
 rootProject.name = 'minecraft-link'
 
 // common: all logic that touches no loader API (vanilla classes only). fabric, neoforge, forge: thin loader modules
 // that compile the common sources into their own jar (the MultiLoader-Template way).
 include('common')
 include('fabric')
+include('neoforge')
 
 // The protocol library lives in its own repository next to this one; Gradle builds it from source
 // and each loader jar bundles it (Fabric jar-in-jar, NeoForge/Forge jarJar, see the loader build files).
