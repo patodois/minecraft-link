@@ -1,0 +1,34 @@
+plugins {
+	id 'net.fabricmc.fabric-loom'
+}
+apply from: rootProject.file('gradle/loader.gradle')
+
+repositories {
+	mavenCentral()
+}
+
+loom {
+	runs {
+		client {
+			client()
+			runDir 'run'
+			// The Mac has 16 GB shared with other builds: keep the game small.
+			vmArg '-Xmx2G'
+			// Scripted runs (see AutoTest): ./gradlew :fabric:runClient -Pautotest=/path/script.txt -Pshots=/path/dir
+			if (project.hasProperty('autotest')) {
+				property 'minecraftlink.autotest', project.property('autotest')
+				property 'minecraftlink.shots', project.hasProperty('shots') ? project.property('shots') : 'run/shots'
+			}
+		}
+	}
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${rootProject.minecraft_version}"
+	implementation "net.fabricmc:fabric-loader:${rootProject.loader_version}"
+	implementation "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_version}"
+
+	// The passthrough link protocol (pure Java), built from ../link-java and bundled into the jar (jar-in-jar).
+	implementation "dev.patodois:link-java:${rootProject.link_java_version}"
+	include "dev.patodois:link-java:${rootProject.link_java_version}"
+}

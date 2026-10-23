@@ -2,6 +2,8 @@ package dev.patodois.minecraftlink.client;
 
 import com.mojang.math.Transformation;
 import dev.patodois.minecraftlink.PoseTrack;
+import dev.patodois.minecraftlink.mixin.BlockDisplayAccess;
+import dev.patodois.minecraftlink.mixin.DisplayAccess;
 import dev.patodois.rewritelink.Wire;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -64,7 +66,7 @@ final class RemoteEntities {
                 r.lastScaleZ = sc[2];
                 float k = (float) (1.0 / s.mapping.scale);
                 Vector3f scale = new Vector3f(sc[0] * k, sc[1] * k, sc[2] * k);
-                d.setTransformation(new Transformation(new Vector3f(-scale.x / 2, -scale.y / 2, -scale.z / 2), new Quaternionf(), scale,
+                ((DisplayAccess) d).minecraftlink$setTransformation(new Transformation(new Vector3f(-scale.x / 2, -scale.y / 2, -scale.z / 2), new Quaternionf(), scale,
                         new Quaternionf()));
             }
         }
@@ -72,8 +74,8 @@ final class RemoteEntities {
 
     private Display.BlockDisplay create(ClientLevel level, Session.Remote r) {
         Display.BlockDisplay d = new Display.BlockDisplay(EntityTypes.BLOCK_DISPLAY, level);
-        d.setBlockState(Blocks.GLAZED_TERRACOTTA.pick(DyeColor.MAGENTA).defaultBlockState().setValue(HorizontalDirectionalBlock.FACING, Direction.SOUTH));
-        d.setViewRange(8.0f);
+        ((BlockDisplayAccess) d).minecraftlink$setBlockState(Blocks.GLAZED_TERRACOTTA.pick(DyeColor.MAGENTA).defaultBlockState().setValue(HorizontalDirectionalBlock.FACING, Direction.SOUTH));
+        ((DisplayAccess) d).minecraftlink$setViewRange(8.0f);
         d.noPhysics = true;
         // Server entity ids are positive; client-only entities get negative ones so they can never clash.
         d.setId(-1_000_000 - nextId.incrementAndGet());

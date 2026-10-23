@@ -1,0 +1,51 @@
+// Shared by the loader modules (fabric, neoforge, forge): they compile the common sources and resources into
+// their own jar, name it minecraft-link-<loader>-<version>.jar, and carry the licences.
+
+apply plugin: 'java'
+
+def common = rootProject.project(':common')
+
+version = rootProject.mod_version
+group = rootProject.maven_group
+
+base {
+	archivesName = "${rootProject.archives_base_name}-${project.name}"
+}
+
+sourceSets.main {
+	java.srcDir common.file('src/main/java')
+	resources.srcDir common.file('src/main/resources')
+}
+
+tasks.withType(JavaCompile).configureEach {
+	options.release = 25
+	options.encoding = 'UTF-8'
+}
+
+java {
+	withSourcesJar()
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
+}
+
+// The version (and a few names) are written into each loader's metadata file.
+tasks.named('processResources') {
+	def props = [
+		version     : rootProject.mod_version,
+		mod_id      : rootProject.mod_id,
+		mod_name    : rootProject.mod_name,
+		minecraft_version: rootProject.minecraft_version,
+		loader_version: rootProject.hasProperty('loader_version') ? rootProject.loader_version : '',
+		neoforge_version: rootProject.hasProperty('neoforge_version') ? rootProject.neoforge_version : '',
+	]
+	inputs.properties props
+	filesMatching(['fabric.mod.json', 'META-INF/neoforge.mods.toml', 'META-INF/mods.toml']) {
+		expand props
+	}
+}
+
+tasks.named('jar') {
+	def projectName = rootProject.name
+	from(rootProject.file('LICENSE-MIT')) { rename { "${it}_${projectName}" } }
+	from(rootProject.file('LICENSE-APACHE')) { rename { "${it}_${projectName}" } }
+}

@@ -1,16 +1,22 @@
 pluginManagement {
 	repositories {
+		gradlePluginPortal()
+		mavenCentral()
 		maven {
 			name = 'Fabric'
 			url = 'https://maven.fabricmc.net/'
 		}
-		mavenCentral()
-		gradlePluginPortal()
 	}
 }
 
 rootProject.name = 'minecraft-link'
 
+// common: all logic that touches no loader API (vanilla classes only). fabric, neoforge, forge: thin loader modules
+// that compile the common sources into their own jar (the MultiLoader-Template way).
+include('common')
+include('fabric')
+
 // The protocol library lives in its own repository next to this one; Gradle builds it from source
-// and the mod jar bundles it (jar-in-jar, see build.gradle).
-includeBuild('../link-java')
+// and each loader jar bundles it (Fabric jar-in-jar, NeoForge/Forge jarJar, see the loader build files).
+// -PlinkJavaDir=<path> points at another checkout (for example a clean one while ../link-java has uncommitted work).
+includeBuild(settings.providers.gradleProperty('linkJavaDir').getOrElse('../link-java'))

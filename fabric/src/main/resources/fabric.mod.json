@@ -1,24 +1,24 @@
 {
 	"schemaVersion": 1,
-	"id": "minecraft_link",
+	"id": "${mod_id}",
 	"version": "${version}",
-	"name": "Rewrite Link for Minecraft",
+	"name": "${mod_name}",
 	"description": "Speaks the rewrite-bridge passthrough link protocol, so Minecraft can be a host or a guest next to another game or rewrite. NOT AN OFFICIAL MINECRAFT PRODUCT. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT.",
 	"authors": ["patodois"],
 	"license": "MIT OR Apache-2.0",
 	"environment": "client",
 	"entrypoints": {
-		"client": ["dev.patodois.minecraftlink.client.MinecraftLinkClient"]
+		"client": ["dev.patodois.minecraftlink.fabric.MinecraftLinkFabric"]
 	},
 	"mixins": [
 		{
-			"config": "minecraft_link.client.mixins.json",
+			"config": "minecraft_link.mixins.json",
 			"environment": "client"
 		}
 	],
 	"depends": {
-		"fabricloader": ">=0.20.1",
-		"minecraft": "~26.3",
+		"fabricloader": ">=${loader_version}",
+		"minecraft": "~${minecraft_version}",
 		"java": ">=25",
 		"fabric-api": "*"
 	}

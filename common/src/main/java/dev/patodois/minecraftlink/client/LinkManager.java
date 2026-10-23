@@ -4,7 +4,7 @@ import dev.patodois.minecraftlink.LinkSettings;
 import dev.patodois.rewritelink.Control.Role;
 import dev.patodois.rewritelink.Wire.WireException;
 import java.io.IOException;
-import net.fabricmc.loader.api.FabricLoader;
+import java.nio.file.Path;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import org.slf4j.Logger;
@@ -29,8 +29,14 @@ public final class LinkManager {
         return session;
     }
 
+    private Path configFile = Path.of("minecraft-link.json");
+
+    void setConfigFile(Path file) {
+        configFile = file;
+    }
+
     void loadSettings() {
-        settings = LinkSettings.load(FabricLoader.getInstance().getConfigDir().resolve("minecraft-link.json"), LOG::warn);
+        settings = LinkSettings.load(configFile, LOG::warn);
     }
 
     /** {@code /link host} / {@code /link guest}. Returns a line for the player. */
@@ -82,7 +88,7 @@ public final class LinkManager {
     }
 
     /** Game exit: close and wait a moment so the peer gets its bye. */
-    void shutdown() {
+    public void shutdown() {
         Session s = session;
         if (s == null) return;
         session = null;
@@ -112,7 +118,7 @@ public final class LinkManager {
 
     // ------------------------------------------------------------------ events (game thread)
 
-    void onClientTick(Minecraft mc) {
+    public void onClientTick(Minecraft mc) {
         Session s = session;
         if (s == null) return;
         if (mc.level == null || mc.player == null) {
@@ -143,7 +149,7 @@ public final class LinkManager {
     }
 
     /** Called on the render thread once per drawn frame, with the camera Minecraft is about to render with. */
-    void onLevelStart(Minecraft mc, net.minecraft.client.renderer.state.level.CameraRenderState camera) {
+    public void onLevelStart(Minecraft mc, net.minecraft.client.renderer.state.level.CameraRenderState camera) {
         Session s = session;
         if (s == null || s.role != Role.HOST || !s.isConnected()) return;
         CameraSampler.sample(mc, s, camera);

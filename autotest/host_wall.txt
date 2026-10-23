@@ -1,0 +1,34 @@
+# Host role against the Rust fake_guest:
+#   fake_guest --port 47833 --frames --in-front
+# The cube appears 4 m ahead of the player (looking north from x=0.0, z=7.5), standing on the collision ground.
+# A stone wall that starts at x=0 and stands between the two must hide the right half of the cube.
+create_world
+wait_world
+cmd /gamemode creative
+cmd /tp @s 0.0 4 7.5 180 0
+wait 40
+look 180 0
+wait 5
+link host 47833
+wait 120
+hud off
+look 180 0
+wait 5
+shot 1-open-field
+cmd /fill 0 4 5 2 5 5 minecraft:stone
+wait 40
+look 180 0
+wait 5
+shot 2-wall-hides-right-half
+hud on
+link status
+hud off
+cmd /fill 0 4 5 2 5 5 minecraft:air
+wait 40
+look 180 0
+wait 5
+shot 3-wall-removed
+hud on
+link stop
+wait 40
+quit

@@ -1,0 +1,34 @@
+# Guest role against the Rust fake_host (port 47831): the host logs the player's poses.
+create_world
+wait_world
+cmd /gamemode creative
+cmd /tp @s 0 4 0 0 0
+wait 40
+pos
+link guest 47831
+wait 60
+log forward key down while the host holds the input focus (movement must be ignored)
+key forward down
+wait 50
+pos
+log asking for focus
+link focus guest
+wait 60
+pos
+wait 60
+pos
+key forward up
+log handing focus back, holding forward again
+link focus host
+wait 20
+key forward down
+wait 40
+pos
+key forward up
+look 90 0
+wait 20
+link status
+wait 20
+link stop
+wait 40
+quit

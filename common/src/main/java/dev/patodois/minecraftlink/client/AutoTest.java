@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
 import net.minecraft.client.gui.screens.TitleScreen;
@@ -30,6 +29,7 @@ import net.minecraft.client.player.LocalPlayer;
  *   link stop | status | focus host | focus guest
  *   key forward down|up     press or release a movement key (forward back left right jump)
  *   look YAW PITCH          set the player's view
+ *   hud on|off              show or hide the HUD and chat (F1), so screenshots show only the world
  *   shot NAME               save NAME.png into minecraftlink.shots
  *   log TEXT                write a line to the log
  *   leave                   leave the world to the title screen
@@ -55,12 +55,13 @@ final class AutoTest {
         }
         shots = Path.of(System.getProperty("minecraftlink.shots", "run/shots"));
         LinkManager.LOG.info("autotest: {} lines from {}, screenshots to {}", lines.size(), script, shots);
-        ClientTickEvents.END_CLIENT_TICK.register(AutoTest::tick);
     }
 
     private static int ticks;
 
-    private static void tick(Minecraft mc) {
+    /** Called from {@link LinkMod#onClientTick} at the end of every client tick; does nothing unless a script was loaded. */
+    static void tick(Minecraft mc) {
+        if (lines == null) return;
         if (++ticks % 200 == 0) {
             LinkManager.LOG.info("autotest: tick {} line {}/{} screen={} level={}", ticks, index, lines.size(),
                     mc.gui.screen() == null ? "none" : mc.gui.screen().getClass().getSimpleName(), mc.level != null);
@@ -172,6 +173,10 @@ final class AutoTest {
                 p.setXRot(Float.parseFloat(a[1]));
                 p.yRotO = p.getYRot();
                 p.xRotO = p.getXRot();
+                return true;
+            }
+            case "hud" -> {
+                if (mc.gui.hud.isHidden() != arg.trim().equals("off")) mc.gui.hud.toggle();
                 return true;
             }
             case "shot" -> {
