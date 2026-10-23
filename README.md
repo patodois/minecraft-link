@@ -316,7 +316,7 @@ git clone -b mc/1.20.1 https://github.com/patodois/minecraft-link
 cd minecraft-link
 export JAVA_HOME=/opt/homebrew/opt/openjdk@25              # or any JDK 25; see "Which JDK"
 ./gradlew build --no-daemon                                # all loaders: <loader>/build/libs/minecraft-link-<loader>-1.20.1-0.1.0.jar, and the tests
-./gradlew :common:test --no-daemon                         # the 51 unit tests only
+./gradlew :common:test --no-daemon                         # the 52 unit tests only
 ./gradlew :fabric:runClient --no-daemon                    # the real client with an offline dev account (-Xmx2G, Java 17); also :forge: and :neoforge:
 ```
 
@@ -345,7 +345,7 @@ Forge and NeoForge jars are reobfuscated to SRG names by `reobfJarJar` and
 Unit tests (JUnit 5, in `common`): the coordinate mapping, camera matrix conversion (the view rotation against a real `PoseStack`, bobbing and
 `splitProjectionBob`, the four depth conventions, rewriting, linear depth), collision triangles for a full block, a slab and stairs, **both from hand-written
 boxes and from Minecraft's own block shapes** (the registries are bootstrapped; no window needed), pose interpolation, reprojection, the camera ring and
-the settings file.
+the settings file. It also runs the guest role (a `Session`) against a link-java host in-process: `spawn` arrives before the first pose, `despawn` on stop, and the host ignores no pose.
 
 ### Scripted client runs
 
