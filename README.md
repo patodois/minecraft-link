@@ -320,7 +320,7 @@ git clone https://github.com/patodois/minecraft-link
 cd minecraft-link
 export JAVA_HOME=/opt/homebrew/opt/openjdk@25         # or any JDK 25; see "Which JDK"
 ./gradlew build --no-daemon                           # all loaders: <loader>/build/libs/minecraft-link-<loader>-26.3-0.1.0.jar, and the tests
-./gradlew :common:test --no-daemon                    # the 48 unit tests only
+./gradlew :common:test --no-daemon                    # the 49 unit tests only
 ./gradlew :fabric:runClient --no-daemon               # the real client with an offline dev account (-Xmx2G); also :neoforge: and :forge:
 ```
 
@@ -336,7 +336,7 @@ GitHub Actions (`.github/workflows/build.yml`) builds everything on Linux and ma
 
 Unit tests (JUnit 5, in `common`): the coordinate mapping, camera matrix conversion (view, bobbing, the four depth conventions, rewriting, linear depth),
 collision triangles for a full block, a slab and stairs, **both from hand-written boxes and from Minecraft's own block shapes**
-(the registries are bootstrapped; no window needed), pose interpolation, reprojection, the camera ring and the settings file.
+(the registries are bootstrapped; no window needed), pose interpolation, reprojection, the camera ring and the settings file. It also runs the guest role (a `Session`) against a link-java host in-process: `spawn` arrives before the first pose, `despawn` on stop, and the host ignores no pose.
 
 ### Which JDK
 
