@@ -81,4 +81,32 @@ class GuestSessionTest {
             host.close();
         }
     }
+
+    /**
+     * Only when RUST_FAKE_HOST_PORT is set (a manual interop run): the same Session as a guest of the Rust reference host
+     * ({@code fake_host --port N}). Passing means it connected and sent poses; the evidence is the host's own log
+     * (poses accepted, {@code unknown_entity 0}).
+     */
+    @org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable(named = "RUST_FAKE_HOST_PORT", matches = "[0-9]+")
+    @Test
+    void theGuestSessionAgainstTheRustFakeHost() throws Exception {
+        LinkSettings settings = new LinkSettings();
+        settings.port = Integer.parseInt(System.getenv("RUST_FAKE_HOST_PORT"));
+        settings.guestEntity = 1;
+        Session s = Session.open(Role.GUEST, settings, "interop");
+        try {
+            long end = System.currentTimeMillis() + 8000;
+            long sent = 0;
+            while (System.currentTimeMillis() < end) {
+                if (s.isConnected()) {
+                    s.offerPose(Wire.Pose.identity(1, Wire.nowUs()));
+                    sent++;
+                }
+                Thread.sleep(50); // 20 poses a second, as the game's tick
+            }
+            assertTrue(sent > 50, "connected to the Rust host and offered poses: " + sent);
+        } finally {
+            s.closeBlocking();
+        }
+    }
 }
