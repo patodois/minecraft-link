@@ -12,13 +12,18 @@ game or rewrite that speaks it: the Rust tools, the Hytale plugin, anything else
 One branch per Minecraft version; each branch has its own README with the exact versions, build steps and test results.
 This page (`main`) is the Minecraft 26.3 mod.
 
-| Minecraft | Branch | Loaders | Status |
-|---|---|---|---|
-| 26.3 | `main` (this page) | Fabric (and Quilt with the same jar), NeoForge, Forge | built and tested on all three |
-| 1.20.1 | [`mc/1.20.1`](https://github.com/patodois/minecraft-link/tree/mc/1.20.1) | Fabric, Forge, NeoForge (the 47.1.x fork) | built and tested on all three |
-| 1.12.2 | [`mc/1.12.2`](https://github.com/patodois/minecraft-link/tree/mc/1.12.2) | Forge | built and tested |
-| 1.7.10 | [`mc/1.7.10`](https://github.com/patodois/minecraft-link/tree/mc/1.7.10) | Forge | built and tested |
-| 1.2.5 | coming (its own repository, not published yet) | Forge 1.2.5 (`BaseMod`) | coming |
+| Minecraft | Branch | Loaders | Status | Download |
+|---|---|---|---|---|
+| 26.3 | `main` (this page) | Fabric (and Quilt with the same jar), NeoForge, Forge | built and tested on all three | [releases `mc-26.3-v*`](https://github.com/patodois/minecraft-link/releases?q=mc-26.3-v) |
+| 1.20.1 | [`mc/1.20.1`](https://github.com/patodois/minecraft-link/tree/mc/1.20.1) | Fabric, Forge, NeoForge (the 47.1.x fork) | built and tested on all three | [releases `mc-1.20.1-v*`](https://github.com/patodois/minecraft-link/releases?q=mc-1.20.1-v) |
+| 1.12.2 | [`mc/1.12.2`](https://github.com/patodois/minecraft-link/tree/mc/1.12.2) | Forge | built and tested | [releases `mc-1.12.2-v*`](https://github.com/patodois/minecraft-link/releases?q=mc-1.12.2-v) |
+| 1.7.10 | [`mc/1.7.10`](https://github.com/patodois/minecraft-link/tree/mc/1.7.10) | Forge | built and tested | [releases `mc-1.7.10-v*`](https://github.com/patodois/minecraft-link/releases?q=mc-1.7.10-v) |
+| 1.2.5 | coming (its own repository, not published yet) | Forge 1.2.5 (`BaseMod`) | coming | none yet |
+
+**Download.** The jars of each version are attached to a release on the [Releases page](https://github.com/patodois/minecraft-link/releases). A release is named after its
+tag, `mc-<Minecraft version>-v<mod version>` (for example `mc-26.3-v0.1.0`), and holds the jars to install for that
+Minecraft version plus a `SHA256SUMS` file to check them against. The jars are not signed. They contain no Mojang or loader
+code. To build them yourself instead, see "Build and test" below.
 
 ```sh
 git clone https://github.com/patodois/minecraft-link
@@ -78,7 +83,7 @@ process's memory.
 
 ## Use
 
-1. Build the jar for your loader (below, and "Try it") and start Minecraft with it.
+1. Get the jar for your loader (the Download column above, or build it: see "Try it") and start Minecraft with it.
 2. Join a world (singleplayer or a server; the mod is client-side only and reads only what your client
    already knows).
 3. `/link host` (the other game connects to you) or `/link guest` (you connect to the other game's host).
@@ -97,7 +102,8 @@ Leaving the world and quitting the game close the link the same way (`despawn` f
 
 ## Try it
 
-Build the jars once (`./gradlew build`, see "Build and test"); they are in `<loader>/build/libs/`.
+Get the jars from the [release `mc-26.3-v0.1.0`](https://github.com/patodois/minecraft-link/releases/tag/mc-26.3-v0.1.0) (the files have the names below, without the folder), or build them
+once (`./gradlew build`, see "Build and test"); a build leaves them in `<loader>/build/libs/`.
 
 | Instance runs | Drop this jar into the instance's `mods` folder | Also needed |
 |---|---|---|
