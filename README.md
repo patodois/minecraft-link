@@ -127,17 +127,17 @@ Then, to see the occlusion:
    opens Minecraft's own flat test world (a flat desert the game builds for its game tests), whose ground is at y = 4, so the
    scripts and the `offset` example under "config" use 4.)
 2. Run `/link host` (it listens on 127.0.0.1:47800).
-3. In a terminal, get and build the Rust reference peers once (they need a [Rust toolchain](https://rustup.rs)):
+3. In a terminal, get the Rust reference peers once (they need a [Rust toolchain](https://rustup.rs)):
 
    ```sh
-   git clone https://github.com/patodois/rewrite-bridge && cd rewrite-bridge && cargo build --release --features link --examples
+   cargo install rewrite-bridge --version 0.2.1 --features link --examples   # from crates.io: fake_guest and fake_host (and two more examples) land in ~/.cargo/bin
    ```
 
-   then start the reference guest from that directory; it puts a cube 4 m ahead of where you look, on the ground
+   then start the reference guest; it puts a cube 4 m ahead of where you look, on the ground
    you stand on (the collision snapshot says where that is):
 
    ```sh
-   target/release/examples/fake_guest --frames --in-front
+   fake_guest --frames --in-front
    ```
 4. The cube appears. Put a wall between you and it, slightly to one side of the line of sight, for example with the player at
    `x 0.0` looking north (`/tp @s 0.0 -60 0.0 180 0` in a default Superflat), a stone wall two blocks in front of you:
@@ -150,7 +150,7 @@ Then, to see the occlusion:
    cube behind the wall disappears; `/fill 0 -60 -2 2 -59 -2 minecraft:air` brings it back.
 5. `/link status` shows the counters, `/link stop` ends the session.
 
-For the other direction run `target/release/examples/fake_host --port 47831` (same directory) and `/link guest 47831` in the game: the host
+For the other direction run `fake_host --port 47831` and `/link guest 47831` in the game: the host
 prints the player's poses.
 
 `autotest/host_wall.txt` and `autotest/guest.txt` are the scripted versions of both (see "Scripted client runs").
