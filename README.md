@@ -90,14 +90,14 @@ The commands are Forge client commands (`ClientCommandHandler`): they run in you
 a server. Leaving the world and quitting the game close the link the same way (`despawn` for a guest, then `bye`,
 then the half-close of CONTRACT 6.1).
 
-**To see it work without a second game**, build the Rust reference peers once (they need a [Rust toolchain](https://rustup.rs)):
+**To see it work without a second game**, install the Rust reference peers once (they need a [Rust toolchain](https://rustup.rs)):
 
 ```sh
-git clone https://github.com/patodois/rewrite-bridge && cd rewrite-bridge && cargo build --release --features link --examples
+cargo install rewrite-bridge --version 0.2.1 --features link --examples   # from crates.io: fake_guest and fake_host (and two more examples) land in ~/.cargo/bin
 ```
 
-Join a Superflat world, run `/link host`, and start `target/release/examples/fake_guest --frames --in-front` in that directory: a cube appears 4 m ahead,
-on the ground you stand on, and a wall between you and it hides the part behind it. For the other direction run `target/release/examples/fake_host --port 47831`
+Join a Superflat world, run `/link host`, and start `fake_guest --frames --in-front`: a cube appears 4 m ahead,
+on the ground you stand on, and a wall between you and it hides the part behind it. For the other direction run `fake_host --port 47831`
 and `/link guest 47831` in the game: the host prints the player's poses.
 
 ### `config/minecraft-link.json`
