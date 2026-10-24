@@ -73,14 +73,14 @@ the deobfuscated one for development runs and does not load in a real game.
    client already knows, so a server does not need it: it declares itself client-only and accepts any server).
 4. `/link host` (the other game connects to you) or `/link guest` (you connect to the other game's host).
 
-**To see it work without a second game**, build the Rust reference peers once (they need a [Rust toolchain](https://rustup.rs)):
+**To see it work without a second game**, install the Rust reference peers once (they need a [Rust toolchain](https://rustup.rs)):
 
 ```sh
-git clone https://github.com/patodois/rewrite-bridge && cd rewrite-bridge && cargo build --release --features link --examples
+cargo install rewrite-bridge --version 0.2.1 --features link --examples   # from crates.io: fake_guest and fake_host (and two more examples) land in ~/.cargo/bin
 ```
 
-Join a Superflat world, run `/link host`, and start `target/release/examples/fake_guest --frames --in-front` in that directory: a cube appears 4 m ahead,
-on the ground you stand on, and a wall between you and it hides the part behind it. For the other direction run `target/release/examples/fake_host --port 47831`
+Join a Superflat world, run `/link host`, and start `fake_guest --frames --in-front`: a cube appears 4 m ahead,
+on the ground you stand on, and a wall between you and it hides the part behind it. For the other direction run `fake_host --port 47831`
 and `/link guest 47831` in the game: the host prints the player's poses.
 
 Other mods that rewrite the world renderer (OptiFine shaders, Angelica-style replacements) can change the framebuffer
