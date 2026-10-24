@@ -64,7 +64,8 @@ see the table in the [main README](https://github.com/patodois/minecraft-link#mi
 
 ## Install
 
-Build the jar (below): `build/libs/minecraft-link-forge-1.7.10-0.1.0.jar`. Use exactly that one, the file without a suffix: not the `-dev` jar, which is
+Download `minecraft-link-forge-1.7.10-0.1.0.jar` from the [release `mc-1.7.10-v0.1.0`](https://github.com/patodois/minecraft-link/releases/tag/mc-1.7.10-v0.1.0) on the Releases page
+(all releases of this version: [`mc-1.7.10-v*`](https://github.com/patodois/minecraft-link/releases?q=mc-1.7.10-v)), or build the jar (below): `build/libs/minecraft-link-forge-1.7.10-0.1.0.jar`. Use exactly that one, the file without a suffix: not the `-dev` jar, which is
 the deobfuscated one for development runs and does not load in a real game (the one exception is the lwjgl3ify test below, which wants it).
 
 1. In Prism Launcher make (or use) an instance for **Minecraft 1.7.10 with Forge** (10.13.4.1614, Prism's Edit
