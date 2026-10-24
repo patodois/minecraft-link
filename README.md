@@ -62,7 +62,8 @@ process's memory.
 ## Other Minecraft versions
 
 This branch is Minecraft 1.20.1 only. The mod for 26.3 (`main`), 1.12.2 (`mc/1.12.2`) and 1.7.10 (`mc/1.7.10`) have their own branches, and 1.2.5 is coming:
-see the table in the [main README](https://github.com/patodois/minecraft-link#minecraft-versions-branches-and-loaders).
+see the table in the [main README](https://github.com/patodois/minecraft-link#minecraft-versions-branches-and-loaders), which also links the
+downloads (the [Releases page](https://github.com/patodois/minecraft-link/releases)).
 
 ## Use
 
@@ -85,7 +86,9 @@ Leaving the world and quitting the game close the link the same way (`despawn` f
 
 ## Try it
 
-Build the jars once (`./gradlew build`, see "Build and test"); they are in `<loader>/build/libs/`.
+Get the jars from the [release `mc-1.20.1-v0.1.0`](https://github.com/patodois/minecraft-link/releases/tag/mc-1.20.1-v0.1.0) on the Releases page (the files have the names below, without the
+folder; all releases of this version: [`mc-1.20.1-v*`](https://github.com/patodois/minecraft-link/releases?q=mc-1.20.1-v)), or build them once (`./gradlew build`, see "Build and test"); a build leaves
+them in `<loader>/build/libs/`.
 
 | Instance runs | Drop this jar into the instance's `mods` folder | Also needed |
 |---|---|---|
