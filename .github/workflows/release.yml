@@ -1,0 +1,108 @@
+name: release
+
+# Push a tag like mc-1.12.2-v0.1.0 and this builds the Minecraft 1.12.2 jars (the same build as build.yml, with link-java
+# checked out next to this repository) and attaches the ones to install, without the -sources, -dev or -slim jars,
+# plus a SHA256SUMS file, to a GitHub Release that it creates.
+# Every Minecraft version has its own branch and its own tag pattern: mc-<minecraft version>-v<mod version>.
+#
+# Run it by hand (Actions > release > Run workflow) for a dry run: the same build, the jars and checksums kept as a
+# workflow artifact, and no release.
+on:
+  push:
+    tags: ['mc-1.12.2-v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  MC_VERSION: '1.12.2'
+
+jobs:
+  release:
+    name: Build and release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: minecraft-link
+      # The protocol library is a Gradle composite build expected next to this repository (../link-java). A release
+      # builds against the tag of the link-java version this mod asks for, so the jar can be built again later.
+      - name: Pick the link-java revision
+        id: lj
+        run: |
+          v="$(grep -o 'link-java-[0-9][0-9.]*\.jar' minecraft-link/build.gradle.kts | head -1 | sed 's/^link-java-//; s/\.jar$//')"
+          if git ls-remote --exit-code --tags https://github.com/patodois/link-java "refs/tags/v$v" >/dev/null; then
+            echo "ref=v$v" >> "$GITHUB_OUTPUT"
+          elif [ "$GITHUB_REF_TYPE" = tag ]; then
+            echo "::error::link-java has no tag v$v yet: push that tag first, then run this release again"
+            exit 1
+          else
+            echo "::warning::link-java has no tag v$v yet, so this dry run uses its default branch"
+            echo "ref=" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        with:
+          repository: patodois/link-java
+          ref: ${{ steps.lj.outputs.ref }}
+          path: link-java
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          # the wrapper in the repository decides the Gradle version; a release only reads the cache
+          cache-read-only: true
+      - name: Build and run the tests
+        working-directory: minecraft-link
+        run: ./gradlew build --no-daemon
+      - name: Collect the jars
+        run: |
+          mkdir dist
+          cp minecraft-link/build/libs/minecraft-link-forge-1.12.2-*[0-9].jar dist/
+          ls -l dist
+          set -- dist/*
+          test "$#" -eq 1
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            # the tag names the version the jars must carry (mod_version / version in the Gradle files)
+            want="${GITHUB_REF_NAME#"mc-$MC_VERSION-v"}"
+            for f in dist/*.jar; do
+              case "$f" in
+                *-"$MC_VERSION-$want.jar") ;;
+                *) echo "::error::$f does not end in -$MC_VERSION-$want.jar: the tag $GITHUB_REF_NAME and the version in the Gradle files differ"; exit 1 ;;
+              esac
+            done
+          fi
+          cd dist
+          sha256sum -- *.jar > SHA256SUMS
+          cat SHA256SUMS
+      # A dry run (workflow_dispatch) ends here
+      - uses: actions/upload-artifact@v4
+        if: github.ref_type != 'tag'
+        with:
+          name: dry-run-release-assets
+          path: dist/*
+          if-no-files-found: error
+      - name: Publish the release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > notes.md <<'NOTES'
+          Minecraft Link for Minecraft 1.12.2: Forge.
+          It needs Forge for Minecraft 1.12.2.
+          Use the jars as they are. Check a download against `SHA256SUMS`. The jars carry link-java inside; there
+          is no Mojang or loader code in them.
+          NOTES
+          flags=()
+          case "${GITHUB_REF_NAME#"mc-$MC_VERSION-v"}" in *-*) flags+=(--prerelease) ;; esac
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" dist/* --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --verify-tag \
+              --title "Minecraft Link for Minecraft $MC_VERSION, ${GITHUB_REF_NAME#"mc-$MC_VERSION-"}" \
+              --notes-file notes.md --generate-notes "${flags[@]}"
+          fi

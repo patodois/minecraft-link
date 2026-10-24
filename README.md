@@ -62,7 +62,8 @@ see the table in the [main README](https://github.com/patodois/minecraft-link#mi
 
 ## Install
 
-Build the jar (below): `build/libs/minecraft-link-forge-1.12.2-0.1.0.jar`. Use exactly that one, the file without a suffix: not the `-dev` jar, which is
+Download `minecraft-link-forge-1.12.2-0.1.0.jar` from the [release `mc-1.12.2-v0.1.0`](https://github.com/patodois/minecraft-link/releases/tag/mc-1.12.2-v0.1.0) on the Releases page
+(all releases of this version: [`mc-1.12.2-v*`](https://github.com/patodois/minecraft-link/releases?q=mc-1.12.2-v)), or build the jar (below): `build/libs/minecraft-link-forge-1.12.2-0.1.0.jar`. Use exactly that one, the file without a suffix: not the `-dev` jar, which is
 the deobfuscated one for development runs and does not load in a real game.
 
 1. In Prism Launcher make (or use) an instance for **Minecraft 1.12.2 with Forge** (14.23.5.2847 or newer 14.23.5.x;
