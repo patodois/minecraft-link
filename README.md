@@ -63,7 +63,7 @@ see the table in the [main README](https://github.com/patodois/minecraft-link#mi
 ## Install
 
 Download `minecraft-link-forge-1.12.2-0.1.0.jar` from the [release `mc-1.12.2-v0.1.0`](https://github.com/patodois/minecraft-link/releases/tag/mc-1.12.2-v0.1.0) on the Releases page
-(all releases of this version: [`mc-1.12.2-v*`](https://github.com/patodois/minecraft-link/releases?q=mc-1.12.2-v)), or build the jar (below): `build/libs/minecraft-link-forge-1.12.2-0.1.0.jar`. Use exactly that one, the file without a suffix: not the `-dev` jar, which is
+(all releases of this version: [`mc-1.12.2-v*`](https://github.com/patodois/minecraft-link/releases?q=mc-1.12.2-v)), or build the jar (below): `build/libs/minecraft-link-forge-1.12.2-0.1.1.jar`. Use exactly that one, the file without a suffix: not the `-dev` jar, which is
 the deobfuscated one for development runs and does not load in a real game.
 
 1. In Prism Launcher make (or use) an instance for **Minecraft 1.12.2 with Forge** (14.23.5.2847 or newer 14.23.5.x;
@@ -234,7 +234,7 @@ git clone https://github.com/patodois/link-java                  # the protocol 
 git clone -b mc/1.12.2 https://github.com/patodois/minecraft-link
 cd minecraft-link
 export JAVA_HOME=/opt/homebrew/opt/openjdk@25                    # or any JDK 25
-./gradlew build --no-daemon          # build/libs/minecraft-link-forge-1.12.2-0.1.0.jar (reobfuscated, link-java merged in), runs the tests
+./gradlew build --no-daemon          # build/libs/minecraft-link-forge-1.12.2-0.1.1.jar (reobfuscated, link-java merged in), runs the tests
 ./gradlew test --no-daemon           # 52 unit tests, no game needed
 ./gradlew runClient --no-daemon      # the real client, deobfuscated dev environment, offline dev account, -Xmx1500m
 ./gradlew runObfClient --no-daemon   # the real client with the reobfuscated release jar, as a player's game runs it
