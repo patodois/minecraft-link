@@ -20,7 +20,7 @@ The protocol implementation is [`link-java`](https://github.com/patodois/link-ja
 reference peers, which are in [`rewrite-bridge`](https://github.com/patodois/rewrite-bridge)), bundled into the mod jar. Everything binds and connects to `127.0.0.1` only (link-java does that itself, whatever
 `java.net.preferIPv6Addresses` says).
 
-Tested with Minecraft **1.20.1**, Gradle 8.14.3 (on JDK 25 or 21, see "Which JDK"), Java 17 for the game and, per loader:
+Tested with Minecraft **1.20.1**, Gradle 8.14.3 (on JDK 21, see "Which JDK"), Java 17 for the game and, per loader:
 
 | Loader | Version | Build tooling |
 |---|---|---|
@@ -317,7 +317,7 @@ it is not downloaded from anywhere else):
 git clone https://github.com/patodois/link-java            # the protocol library, a sibling directory of minecraft-link
 git clone -b mc/1.20.1 https://github.com/patodois/minecraft-link
 cd minecraft-link
-export JAVA_HOME=/opt/homebrew/opt/openjdk@25              # or any JDK 25; see "Which JDK"
+export JAVA_HOME=/path/to/a/jdk-21                         # a JDK 21, not 25; see "Which JDK"
 ./gradlew build --no-daemon                                # all loaders: <loader>/build/libs/minecraft-link-<loader>-1.20.1-0.1.0.jar, and the tests
 ./gradlew :common:test --no-daemon                         # the 52 unit tests only
 ./gradlew :fabric:runClient --no-daemon                    # the real client with an offline dev account (-Xmx2G, Java 17); also :forge: and :neoforge:
@@ -325,13 +325,17 @@ export JAVA_HOME=/opt/homebrew/opt/openjdk@25              # or any JDK 25; see 
 
 ### Which JDK
 
-One rule for every branch of this repository: **run Gradle with a JDK 25.** The 26.3 branch and the 1.12.2 and 1.7.10 branches refuse anything older
-(Fabric Loom 1.19 and RetroFuturaGradle 2.0.6 are compiled for Java 25), so JDK 25 is the one that works everywhere. On this branch a JDK 21 works too
-(Loom 1.13 wants 21 or newer; Gradle 8.14.3 officially lists JDK 24 as its newest and 25 worked all the same). The game and the mod are Java 17, but you do
-not install that: Gradle's toolchain resolver (`settings.gradle`) downloads a JDK 17 when the machine has none.
+**On this branch run Gradle with a JDK 21.** The other branches (26.3, 1.12.2, 1.7.10) need a JDK 25 (Fabric Loom 1.19 and RetroFuturaGradle 2.0.6 are
+compiled for Java 25), but this one cannot use it: Gradle 8.14.3 officially lists JDK 24 as its newest, and on a JDK 25 it fails as soon as it has to compile a
+build script, with `BUG! exception in phase 'semantic analysis' in source unit '_BuildScript_' Unsupported class file major version 69` (its Groovy cannot read
+the JDK 25 class files). A JDK 25 only seems to work while Gradle's cache of already compiled build scripts is warm: `./gradlew help` passes, and fails again after any
+edit of a `build.gradle`. The 26.3 branch runs Gradle 9.x on JDK 25, but ForgeGradle 6 is built for Gradle 8 and Loom 1.13.6 is the newest Loom
+that runs on it (see below), so moving this branch to Gradle 9 means moving its three loader plugins too. Loom 1.13 wants JDK 21 or newer. The game and the mod are Java 17,
+but you do not install that: Gradle's toolchain resolver (`settings.gradle`) downloads a JDK 17 when the machine has none.
 
-Verified here: the whole build, the unit tests and the jars with Homebrew `openjdk@25` 25.0.5 and with Temurin 21.0.12. The dev-client and real-profile runs
-recorded below were made with Gradle on JDK 21. Not tried: JDK 17 and JDK 26 or newer.
+Verified here: `./gradlew help`, the whole build, the unit tests and the jars with Temurin 21.0.12; `./gradlew help` fails with Homebrew `openjdk@25` 25.0.5
+as soon as a build script changes (checked by appending a comment to `build.gradle`). The dev-client and real-profile runs recorded below were made with Gradle
+on JDK 21. Not tried: JDK 17, 22 to 24, and 26 or newer.
 
 Gradle 8.14.3, not the 9.x of the 26.3 mod: ForgeGradle 6 is built for Gradle 8, and Loom 1.13.6 is the newest Loom that still runs on it (Loom 1.14 and
 later need Gradle 9).
