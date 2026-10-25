@@ -29,7 +29,7 @@ Tested with Minecraft **1.20.1**, Gradle 8.14.3 (on JDK 21, see "Which JDK"), Ja
 | NeoForge | 47.1.106 (1.20.1) | ModDevGradle legacy 2.0.148 |
 
 One version number (`mod_version` in `gradle.properties`) goes into every jar. The jars carry the Minecraft version in their name:
-`minecraft-link-<loader>-<minecraft version>-<version>.jar`, for example `minecraft-link-forge-1.20.1-0.1.0.jar`. Quilt was not tried on 1.20.1.
+`minecraft-link-<loader>-<minecraft version>-<version>.jar`, for example `minecraft-link-forge-1.20.1-0.1.1.jar`. Quilt was not tried on 1.20.1.
 
 ## What this mod is not
 
@@ -92,9 +92,9 @@ them in `<loader>/build/libs/`.
 
 | Instance runs | Drop this jar into the instance's `mods` folder | Also needed |
 |---|---|---|
-| Fabric | `fabric/build/libs/minecraft-link-fabric-1.20.1-0.1.0.jar` | [Fabric API](https://modrinth.com/mod/fabric-api) for 1.20.1 (0.92.x) |
-| Forge | `forge/build/libs/minecraft-link-forge-1.20.1-0.1.0.jar` | nothing |
-| NeoForge | `neoforge/build/libs/minecraft-link-neoforge-1.20.1-0.1.0.jar` | nothing |
+| Fabric | `fabric/build/libs/minecraft-link-fabric-1.20.1-0.1.1.jar` | [Fabric API](https://modrinth.com/mod/fabric-api) for 1.20.1 (0.92.x) |
+| Forge | `forge/build/libs/minecraft-link-forge-1.20.1-0.1.1.jar` | nothing |
+| NeoForge | `neoforge/build/libs/minecraft-link-neoforge-1.20.1-0.1.1.jar` | nothing |
 
 Use exactly these jars, the ones without a suffix: not `-dev`, not `-sources`, and not the `-slim` jar that the Forge build also leaves (it has no link-java inside).
 
@@ -102,17 +102,17 @@ Use exactly these jars, the ones without a suffix: not `-dev`, not `-sources`, a
 
 1. **Add Instance**, pick **Minecraft 1.20.1**, then **Forge** in the loader list on the right and the 47.4.28 build (or any 47.x), **OK**.
 2. Select the instance, **Edit**, **Mods**, **Add file** (or right-click the instance, **Folder**, **Minecraft Folder**, and drop the jar into `mods`),
-   and add `minecraft-link-forge-1.20.1-0.1.0.jar`.
+   and add `minecraft-link-forge-1.20.1-0.1.1.jar`.
 3. Start it with an account, or offline for a test. Prism picks Java 17 for 1.20.1 by itself.
 
 **Prism Launcher**, Fabric:
 
 1. **Add Instance**, **Minecraft 1.20.1**, loader **Fabric** (Loader 0.14.21 or newer), **OK**.
 2. **Edit**, **Mods**, **Download mods** (Modrinth) and search for **Fabric API**, pick the 0.92.x build for 1.20.1, or add the jar by hand; then
-   **Add file** and add `minecraft-link-fabric-1.20.1-0.1.0.jar`.
+   **Add file** and add `minecraft-link-fabric-1.20.1-0.1.1.jar`.
 3. Start it.
 
-NeoForge 1.20.1 (47.1.x) works the same way with `minecraft-link-neoforge-1.20.1-0.1.0.jar`, if your Prism Launcher offers NeoForge for 1.20.1 (it was tested with
+NeoForge 1.20.1 (47.1.x) works the same way with `minecraft-link-neoforge-1.20.1-0.1.1.jar`, if your Prism Launcher offers NeoForge for 1.20.1 (it was tested with
 NeoForge's own installer, not through Prism).
 
 Then, to see the occlusion:
@@ -318,7 +318,7 @@ git clone https://github.com/patodois/link-java            # the protocol librar
 git clone -b mc/1.20.1 https://github.com/patodois/minecraft-link
 cd minecraft-link
 export JAVA_HOME=/path/to/a/jdk-21                         # a JDK 21, not 25; see "Which JDK"
-./gradlew build --no-daemon                                # all loaders: <loader>/build/libs/minecraft-link-<loader>-1.20.1-0.1.0.jar, and the tests
+./gradlew build --no-daemon                                # all loaders: <loader>/build/libs/minecraft-link-<loader>-1.20.1-0.1.1.jar, and the tests
 ./gradlew :common:test --no-daemon                         # the 52 unit tests only
 ./gradlew :fabric:runClient --no-daemon                    # the real client with an offline dev account (-Xmx2G, Java 17); also :forge: and :neoforge:
 ```
