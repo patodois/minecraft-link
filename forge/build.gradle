@@ -48,7 +48,7 @@ dependencies {
 
 	// The passthrough link protocol (pure Java), built from ../link-java and bundled into the jar (jarJar).
 	implementation "dev.patodois:link-java:${rootProject.link_java_version}"
-	// A plain version here becomes the range [0.1.0,) in the jar's metadata.
+	// A plain version here becomes the range [0.1.2,) in the jar's metadata.
 	jarJar "dev.patodois:link-java:${rootProject.link_java_version}"
 }
 

@@ -51,7 +51,7 @@ Tested with Minecraft **26.3**, JDK 25 (see "Which JDK"), Gradle 9.8.2 and, per 
 | Forge | 66.1.0 | ForgeGradle 7.0.40, JarJar plugin 0.2.3 |
 
 One version number (`mod_version` in `gradle.properties`) goes into every jar. The jars carry the Minecraft version in
-their name: `minecraft-link-<loader>-<minecraft version>-<version>.jar`, for example `minecraft-link-fabric-26.3-0.1.0.jar`.
+their name: `minecraft-link-<loader>-<minecraft version>-<version>.jar`, for example `minecraft-link-fabric-26.3-0.1.1.jar`.
 
 ## What this mod is not
 
@@ -107,10 +107,10 @@ once (`./gradlew build`, see "Build and test"); a build leaves them in `<loader>
 
 | Instance runs | Drop this jar into the instance's `mods` folder | Also needed |
 |---|---|---|
-| Fabric | `fabric/build/libs/minecraft-link-fabric-26.3-0.1.0.jar` | [Fabric API](https://modrinth.com/mod/fabric-api) for 26.3 |
+| Fabric | `fabric/build/libs/minecraft-link-fabric-26.3-0.1.1.jar` | [Fabric API](https://modrinth.com/mod/fabric-api) for 26.3 |
 | Quilt | the same Fabric jar | the Fabric API jar (Quilted Fabric API has no 26.x release) |
-| NeoForge | `neoforge/build/libs/minecraft-link-neoforge-26.3-0.1.0.jar` | nothing |
-| Forge | `forge/build/libs/minecraft-link-forge-26.3-0.1.0.jar` | nothing |
+| NeoForge | `neoforge/build/libs/minecraft-link-neoforge-26.3-0.1.1.jar` | nothing |
+| Forge | `forge/build/libs/minecraft-link-forge-26.3-0.1.1.jar` | nothing |
 
 Use exactly these jars, the ones without a suffix. The `-sources` jars are for reading, and the Forge build also leaves a
 `-slim` jar without link-java: do not use that one.
@@ -325,7 +325,7 @@ git clone https://github.com/patodois/link-java       # the protocol library, a 
 git clone https://github.com/patodois/minecraft-link
 cd minecraft-link
 export JAVA_HOME=/opt/homebrew/opt/openjdk@25         # or any JDK 25; see "Which JDK"
-./gradlew build --no-daemon                           # all loaders: <loader>/build/libs/minecraft-link-<loader>-26.3-0.1.0.jar, and the tests
+./gradlew build --no-daemon                           # all loaders: <loader>/build/libs/minecraft-link-<loader>-26.3-0.1.1.jar, and the tests
 ./gradlew :common:test --no-daemon                    # the 49 unit tests only
 ./gradlew :fabric:runClient --no-daemon               # the real client with an offline dev account (-Xmx2G); also :neoforge: and :forge:
 ```
