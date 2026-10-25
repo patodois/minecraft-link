@@ -16,7 +16,7 @@ import cpw.mods.fml.relauncher.Side;
  *   <li>{@code RenderWorldLastEvent}: after the world is drawn and before the hand and the GUI: camera, placeholder, guest frame.</li>
  * </ul>
  */
-@Mod(modid = MinecraftLinkMod.MODID, name = "Rewrite Link for Minecraft", version = "0.1.0", acceptedMinecraftVersions = "[1.7.10]",
+@Mod(modid = MinecraftLinkMod.MODID, name = "Rewrite Link for Minecraft", version = "0.1.1", acceptedMinecraftVersions = "[1.7.10]",
         acceptableRemoteVersions = "*")
 public final class MinecraftLinkMod {
     public static final String MODID = "minecraft_link";

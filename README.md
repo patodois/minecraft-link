@@ -65,7 +65,7 @@ see the table in the [main README](https://github.com/patodois/minecraft-link#mi
 ## Install
 
 Download `minecraft-link-forge-1.7.10-0.1.0.jar` from the [release `mc-1.7.10-v0.1.0`](https://github.com/patodois/minecraft-link/releases/tag/mc-1.7.10-v0.1.0) on the Releases page
-(all releases of this version: [`mc-1.7.10-v*`](https://github.com/patodois/minecraft-link/releases?q=mc-1.7.10-v)), or build the jar (below): `build/libs/minecraft-link-forge-1.7.10-0.1.0.jar`. Use exactly that one, the file without a suffix: not the `-dev` jar, which is
+(all releases of this version: [`mc-1.7.10-v*`](https://github.com/patodois/minecraft-link/releases?q=mc-1.7.10-v)), or build the jar (below): `build/libs/minecraft-link-forge-1.7.10-0.1.1.jar`. Use exactly that one, the file without a suffix: not the `-dev` jar, which is
 the deobfuscated one for development runs and does not load in a real game (the one exception is the lwjgl3ify test below, which wants it).
 
 1. In Prism Launcher make (or use) an instance for **Minecraft 1.7.10 with Forge** (10.13.4.1614, Prism's Edit
@@ -239,7 +239,7 @@ git clone https://github.com/patodois/link-java                  # the protocol 
 git clone -b mc/1.7.10 https://github.com/patodois/minecraft-link
 cd minecraft-link
 export JAVA_HOME=/opt/homebrew/opt/openjdk@25                    # or any JDK 25
-./gradlew build --no-daemon          # build/libs/minecraft-link-forge-1.7.10-0.1.0.jar (reobfuscated, link-java merged in), runs the tests
+./gradlew build --no-daemon          # build/libs/minecraft-link-forge-1.7.10-0.1.1.jar (reobfuscated, link-java merged in), runs the tests
 ./gradlew test --no-daemon           # 52 unit tests, no game needed
 ./gradlew runClient --no-daemon      # the real client, deobfuscated dev environment, offline dev account, -Xmx1500m
 ./gradlew runObfClient --no-daemon   # the real client with the reobfuscated release jar, as a player's game runs it
@@ -293,7 +293,7 @@ provides.
 
 To test, copy [ExampleMod1.7.10](https://github.com/GTNewHorizons/ExampleMod1.7.10) somewhere, put the `-dev.jar`
 that `./gradlew build` leaves in `build/libs` into its `libs/`, add
-`runtimeOnlyNonPublishable(files("libs/minecraft-link-forge-1.7.10-0.1.0-dev.jar"))` to its `dependencies.gradle`, and run its
+`runtimeOnlyNonPublishable(files("libs/minecraft-link-forge-1.7.10-0.1.1-dev.jar"))` to its `dependencies.gradle`, and run its
 `./gradlew runClient25` (or `runClient21`, `runClient17`; GTNHGradle's tasks for lwjgl3ify, Hodgepodge and UniMixins).
 The result of that test is below. In this repository's own builds nothing of this is configured.
 
