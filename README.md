@@ -4,8 +4,13 @@
 
 A client-side mod for Minecraft: Java Edition on **Fabric** (and **Quilt**, with the same jar), **NeoForge** and **Forge** that speaks the
 **rewrite-bridge passthrough link protocol v1** (`docs/CONTRACT.md` in the `rewrite-bridge`
-repository, revision 4), so a running Minecraft can be a **host** or a **guest** next to any other
+repository, revision 5), so a running Minecraft can be a **host** or a **guest** next to any other
 game or rewrite that speaks it: the Rust tools, the Hytale plugin, anything else.
+
+**Status.** Version **0.1.2** (link-java 0.1.3, contract revision 5): built and unit-tested on Fabric, NeoForge and Forge; not released yet. The
+latest published release is 0.1.1 (link-java 0.1.2, revision 4). What 0.1.2 changes: guest frames are read with link-java's size-aware call, so a
+frame whose `Frame` datagram disagrees with its slot header is skipped (contract 9.6); and a collision snapshot over the revision 5 limit of 925,696
+triangles is cut to the nearest ones and reported, never dropped silently (see "Host: how it works").
 
 ## Minecraft versions, branches and loaders
 
@@ -51,7 +56,7 @@ Tested with Minecraft **26.3**, JDK 25 (see "Which JDK"), Gradle 9.8.2 and, per 
 | Forge | 66.1.0 | ForgeGradle 7.0.40, JarJar plugin 0.2.3 |
 
 One version number (`mod_version` in `gradle.properties`) goes into every jar. The jars carry the Minecraft version in
-their name: `minecraft-link-<loader>-<minecraft version>-<version>.jar`, for example `minecraft-link-fabric-26.3-0.1.1.jar`.
+their name: `minecraft-link-<loader>-<minecraft version>-<version>.jar`, for example `minecraft-link-fabric-26.3-0.1.2.jar`.
 
 ## What this mod is not
 
@@ -93,7 +98,7 @@ process's memory.
 | `/link host [port]` | listen on `127.0.0.1:port` (default 47800) for one guest |
 | `/link guest [port]` | connect to a host on `127.0.0.1:port`, retrying until one answers |
 | `/link stop` | say `bye`, half-close, drain and close (on a helper thread: the game never waits) |
-| `/link status` | role, peer, input focus, counters, frame and depth information |
+| `/link status` | role, peer, input focus, counters, frame and depth information, and the collision size limit (how many snapshots were cut to the nearest 925,696 triangles) |
 | `/link focus host\|guest` | host: give the input focus; guest: ask the host for it |
 | `/link` | same as `status` |
 
@@ -107,10 +112,10 @@ once (`./gradlew build`, see "Build and test"); a build leaves them in `<loader>
 
 | Instance runs | Drop this jar into the instance's `mods` folder | Also needed |
 |---|---|---|
-| Fabric | `fabric/build/libs/minecraft-link-fabric-26.3-0.1.1.jar` | [Fabric API](https://modrinth.com/mod/fabric-api) for 26.3 |
+| Fabric | `fabric/build/libs/minecraft-link-fabric-26.3-0.1.2.jar` | [Fabric API](https://modrinth.com/mod/fabric-api) for 26.3 |
 | Quilt | the same Fabric jar | the Fabric API jar (Quilted Fabric API has no 26.x release) |
-| NeoForge | `neoforge/build/libs/minecraft-link-neoforge-26.3-0.1.1.jar` | nothing |
-| Forge | `forge/build/libs/minecraft-link-forge-26.3-0.1.1.jar` | nothing |
+| NeoForge | `neoforge/build/libs/minecraft-link-neoforge-26.3-0.1.2.jar` | nothing |
+| Forge | `forge/build/libs/minecraft-link-forge-26.3-0.1.2.jar` | nothing |
 
 Use exactly these jars, the ones without a suffix. The `-sources` jars are for reading, and the Forge build also leaves a
 `-slim` jar without link-java: do not use that one.
@@ -169,7 +174,7 @@ Written with the defaults on first start. Unknown keys are ignored.
   "scale": 1.0,                // link metres per block
   "offset": [0, 0, 0],         // link position of the Minecraft origin (after flip and scale)
   "interp_delay_ms": 40,       // host: guest entities are shown this far in the past, to interpolate
-  "collision_radius": 16,      // host: blocks around the player in the collision snapshot
+  "collision_radius": 16,      // host: blocks around the player in the collision snapshot (1 to 64; over 925,696 triangles the farthest are cut)
   "collision_interval_ms": 500,// host: least time between rescans (how block changes are noticed)
   "collision_move_blocks": 1.0,// host: rescan at once after the player moved this far
   "guest_entity": 1,           // guest: entity id, and what `spawn` announces
@@ -239,6 +244,16 @@ triangles, counter-clockwise from outside, chunked by the link library (226 tria
   horizontal layer at a time); the triangles are built, mapped and hashed on a helper thread.
 - A face is left out when a full block sits behind it, and where two boxes of one block touch (the inside
   of a stair), so solid ground costs only its top. A flat desert world gave about 7,000 triangles for r = 16 (its rim included).
+- **Size limit (contract revision 5).** A snapshot has at most 4096 chunks, that is 925,696 triangles (32 MiB on the wire), and link-java throws a
+  `WireException` for a bigger one. The mod never hands it one: a snapshot over the limit is **cut to the 925,696 triangles nearest to the player**
+  (distance from the scan centre to the closest point of the triangle; ties keep scan order, so the same world gives the same snapshot), and the
+  `radius` it announces shrinks to the distance of the nearest dropped triangle, so the guest is told what the snapshot really covers instead of
+  taking the dropped area for empty air. The cut is not silent: the first oversize snapshot (and the first one after a snapshot fit again) prints
+  `[link] collision snapshot too big: ...` in the chat and the log, and `/link status` shows `limit 925696, N cut to the nearest triangles, latest
+  A -> B (D dropped, complete within R m)`. If link-java refuses a snapshot anyway while the link is up, that is reported and counted the same way
+  (`collision snapshot not sent: ...`), not swallowed as "not connected". `collision_radius` goes up to 64 (a cube 129 blocks wide) and the triangle
+  count grows with the terrain surface inside it, so a large radius over rough or built-up land is what can reach the limit; a smaller
+  `collision_radius` avoids the cut.
 - A new scan starts when the player moved a block, or `collision_interval_ms` after the last one; an
   unchanged result is not sent again (except as a refresh every 5 s). Minecraft has no client-side block-change event to hook, so changes are found by rescanning.
 
@@ -253,7 +268,8 @@ is shown, not roll. While a guest's frames are on screen the placeholder is hidd
 
 1. `frame_channel` names the pixel file; the frame worker maps it read-only (`PixelFile.Reader` in
    link-java: all header and depth checks of the contract, the seqlock, an unknown `depth_format` read as colour only).
-2. On each `Frame` it copies the slot, looks `camera_seq` up in a ring of the last 256 cameras sent (a second at 240 fps; the contract asks for half a second) and reprojects the
+2. On each `Frame` it copies the slot with the size-aware call `reader.read(frame, true)` (link-java 0.1.3: a frame is skipped, before any pixel is copied,
+   when its datagram's width or height is 0 or above the file's, or differs from the slot header's; frame 0 is always skipped), looks `camera_seq` up in a ring of the last 256 cameras sent (a second at 240 fps; the contract asks for half a second) and reprojects the
    frame (colour and linear depth in metres) from that camera to the one being presented now (`Reproject`, on a helper thread).
 3. At the start of a frame the render thread uploads the result to an RGBA8 and an R32F texture. After the main pass of the
    level it draws one fullscreen pass (`assets/minecraft_link/shaders/core/link_frame.fsh`) that converts Minecraft's depth buffer to linear metres with the contract's
@@ -325,8 +341,8 @@ git clone https://github.com/patodois/link-java       # the protocol library, a 
 git clone https://github.com/patodois/minecraft-link
 cd minecraft-link
 export JAVA_HOME=/opt/homebrew/opt/openjdk@25         # or any JDK 25; see "Which JDK"
-./gradlew build --no-daemon                           # all loaders: <loader>/build/libs/minecraft-link-<loader>-26.3-0.1.1.jar, and the tests
-./gradlew :common:test --no-daemon                    # the 49 unit tests only
+./gradlew build --no-daemon                           # all loaders: <loader>/build/libs/minecraft-link-<loader>-26.3-0.1.2.jar, and the tests
+./gradlew :common:test --no-daemon                    # the unit tests only (58, plus 2 that need the Rust reference peers)
 ./gradlew :fabric:runClient --no-daemon               # the real client with an offline dev account (-Xmx2G); also :neoforge: and :forge:
 ```
 

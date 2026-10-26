@@ -1,5 +1,6 @@
 package dev.patodois.minecraftlink.client;
 
+import dev.patodois.minecraftlink.CollisionCap;
 import dev.patodois.minecraftlink.LinkSettings;
 import dev.patodois.minecraftlink.Mapping;
 import dev.patodois.minecraftlink.PoseTrack;
@@ -91,6 +92,16 @@ final class Session {
     final AtomicLong camerasSent = new AtomicLong();
     final AtomicLong collisionsSent = new AtomicLong();
     final AtomicLong collisionTriangles = new AtomicLong();
+    /** Snapshots that had more than {@link CollisionCap#MAX_TRIANGLES} triangles and were cut to the nearest ones (CONTRACT 9.5, revision 5). */
+    final AtomicLong collisionsTrimmed = new AtomicLong();
+    /** Triangles of the latest trimmed snapshot before and after the cut, and the radius it announced; 0 until one was trimmed. */
+    volatile int lastTrimOffered, lastTrimDropped;
+    volatile float lastTrimRadius;
+    /** Whether the latest snapshot offered had to be cut (the player is told when this turns true, not for every snapshot). */
+    private volatile boolean trimming;
+    /** Snapshots that link-java refused although the link was up; the reason of the latest one. */
+    final AtomicLong collisionsRefused = new AtomicLong();
+    volatile String lastRefusal = "";
     final AtomicLong posesSent = new AtomicLong();
     final AtomicLong posesReceived = new AtomicLong();
     final AtomicLong framesReceived = new AtomicLong();
@@ -127,7 +138,30 @@ final class Session {
         cameraOut.set(c);
     }
 
+    /**
+     * Queues a collision snapshot for the link thread. One over {@link CollisionCap#MAX_TRIANGLES} triangles is cut here to
+     * the triangles nearest to its centre (the contract's rule for a sender) and the player is told, in the log and in the chat; it
+     * is never handed to link-java whole, because link-java throws for it and {@link #tick} would take that for a lost link. Runs on the
+     * caller's thread (the collision worker), which does the sort, not on the link thread.
+     */
     void offerCollision(CollisionOut c) {
+        CollisionCap.Result r = CollisionCap.limit(c.triangles(), c.center(), c.radius());
+        if (r.trimmed()) {
+            c = new CollisionOut(c.center(), r.radius, r.triangles);
+            collisionsTrimmed.incrementAndGet();
+            lastTrimOffered = r.offered;
+            lastTrimDropped = r.dropped;
+            lastTrimRadius = r.radius;
+            if (!trimming) {
+                trimming = true;
+                messages.add("collision snapshot too big: " + r.offered + " triangles, the contract allows " + CollisionCap.MAX_TRIANGLES
+                        + " (revision 5). Sending the " + CollisionCap.MAX_TRIANGLES + " nearest to you and dropping " + r.dropped
+                        + "; it is complete within " + String.format(java.util.Locale.ROOT, "%.1f", r.radius) + " m of you, nothing is claimed beyond. "
+                        + "A smaller collision_radius (now " + settings.collisionRadius + ") avoids this.");
+            }
+        } else {
+            trimming = false;
+        }
         collisionOut.set(c);
     }
 
@@ -172,9 +206,21 @@ final class Session {
             }
             CollisionOut col = collisionOut.getAndSet(null);
             if (col != null && role == Role.HOST) {
-                link.sendCollision(col.center(), col.radius(), col.triangles());
-                collisionsSent.incrementAndGet();
-                collisionTriangles.set(col.triangles().size());
+                try {
+                    link.sendCollision(col.center(), col.radius(), col.triangles());
+                    collisionsSent.incrementAndGet();
+                    collisionTriangles.set(col.triangles().size());
+                } catch (WireException e) {
+                    // Not connected any more is the poll's business (Lost). With the link up, the library refused the snapshot
+                    // itself: say so, once per distinct reason, instead of dropping it silently.
+                    if (!link.isConnected()) throw e;
+                    collisionsRefused.incrementAndGet();
+                    String why = String.valueOf(e.getMessage());
+                    if (!why.equals(lastRefusal)) {
+                        lastRefusal = why;
+                        messages.add("collision snapshot not sent: " + why);
+                    }
+                }
             }
             Wire.Pose pose = poseOut.getAndSet(null);
             if (pose != null && role == Role.GUEST) {
@@ -259,6 +305,24 @@ final class Session {
         runner.close();
     }
 
+    /** What {@code /link status} says about the collision size limit: it is never silent that triangles were left out. */
+    String collisionLimitNote() {
+        StringBuilder b = new StringBuilder();
+        b.append("limit ").append(CollisionCap.MAX_TRIANGLES);
+        long t = collisionsTrimmed.get();
+        if (t == 0) {
+            b.append(", none cut");
+        } else {
+            b.append(", ").append(t).append(" cut to the nearest triangles, latest ").append(lastTrimOffered).append(" -> ")
+                    .append(lastTrimOffered - lastTrimDropped).append(" (").append(lastTrimDropped).append(" dropped, complete within ")
+                    .append(String.format(java.util.Locale.ROOT, "%.1f", lastTrimRadius)).append(" m)");
+            if (trimming) b.append(", cutting now; lower collision_radius, now ").append(settings.collisionRadius);
+        }
+        long r = collisionsRefused.get();
+        if (r > 0) b.append(", ").append(r).append(" refused by link-java: ").append(lastRefusal);
+        return b.toString();
+    }
+
     String describe() {
         StringBuilder b = new StringBuilder();
         b.append(role.wire).append(" on 127.0.0.1:");
@@ -272,7 +336,8 @@ final class Session {
         }
         if (role == Role.HOST) {
             b.append("; sent ").append(camerasSent.get()).append(" cameras, ").append(collisionsSent.get())
-                    .append(" collision snapshots (").append(collisionTriangles.get()).append(" triangles); received ")
+                    .append(" collision snapshots (").append(collisionTriangles.get()).append(" triangles, ").append(collisionLimitNote())
+                    .append("); received ")
                     .append(posesReceived.get()).append(" poses, ").append(framesReceived.get()).append(" frames; ")
                     .append(remotes.size()).append(" guest entities");
         } else {

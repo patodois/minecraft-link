@@ -10,7 +10,7 @@ group = rootProject.maven_group
 
 base {
 	// The Minecraft version is in the name, so the jars of two Minecraft versions never share a file name:
-	// minecraft-link-fabric-26.3-0.1.1.jar
+	// minecraft-link-fabric-26.3-0.1.2.jar
 	archivesName = "${rootProject.archives_base_name}-${project.name}-${rootProject.minecraft_version}"
 }
 

@@ -168,7 +168,8 @@ final class FrameOverlay {
                 LinkEvent.Frame ev = s.latestFrame.getAndSet(null);
                 if (ev != null && reader != null) {
                     Wire.FrameReady fr = ev.frame();
-                    PixelFile.Frame f = reader.read(fr.frame(), fr.slot(), true);
+                    // The size-aware call: a frame whose datagram size disagrees with its slot header is skipped (CONTRACT 9.6, reader step 2).
+                    PixelFile.Frame f = reader.read(fr, true);
                     if (f != null) {
                         current = f;
                         currentVersion++;
