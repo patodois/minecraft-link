@@ -302,7 +302,8 @@ final class Session {
             b.append("; sent ").append(posesSent.get()).append(" poses; received ").append(camerasReceived.get()).append(" cameras");
         }
         b.append("; datagrams in/out ").append(link.datagramsReceived).append("/").append(link.datagramsSent)
-                .append(", malformed ").append(link.malformed).append(", stale ").append(link.stale).append(", foreign ").append(link.foreign);
+                .append(", malformed ").append(link.malformed).append(", stale ").append(link.stale).append(", foreign ").append(link.foreign)
+                .append(", unknown_entity ").append(link.unknownEntity).append(", spawn_ignored ").append(link.spawnIgnored);
         return b.toString();
     }
 }
