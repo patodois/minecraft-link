@@ -7,7 +7,7 @@ A client-side mod for Minecraft: Java Edition **1.20.1** on **Fabric**, **Forge*
 repository, revision 5), so a running Minecraft can be a **host** or a **guest** next to any other
 game or rewrite that speaks it: the Rust tools, the Hytale plugin, anything else.
 
-**Status.** Version **0.1.2** (link-java 0.1.3, contract revision 5): built and unit-tested on Fabric, Forge and NeoForge; not released yet. The
+**Status.** Version **0.1.2** (link-java 0.1.3, contract revision 5): built and unit-tested on Fabric, Forge and NeoForge; released as [mc-1.20.1-v0.1.2](https://github.com/patodois/minecraft-link/releases/tag/mc-1.20.1-v0.1.2) after the live interop matrix passed 50/50 pairs on 2026-10-26. The
 latest published release is 0.1.1 (link-java 0.1.2, revision 4). What 0.1.2 changes: guest frames are read with link-java's size-aware call, so a
 frame whose `Frame` datagram disagrees with its slot header is skipped (contract 9.6); and a collision snapshot over the revision 5 limit of 925,696
 triangles is cut to the nearest ones and reported, never dropped silently (see "Host: how it works").
