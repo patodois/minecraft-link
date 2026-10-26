@@ -4,8 +4,13 @@
 
 A client-side mod for Minecraft: Java Edition **1.20.1** on **Fabric**, **Forge** and **NeoForge** (the 1.20.1 fork, 47.1.x) that speaks the
 **rewrite-bridge passthrough link protocol v1** (`docs/CONTRACT.md` in the `rewrite-bridge`
-repository, revision 4), so a running Minecraft can be a **host** or a **guest** next to any other
+repository, revision 5), so a running Minecraft can be a **host** or a **guest** next to any other
 game or rewrite that speaks it: the Rust tools, the Hytale plugin, anything else.
+
+**Status.** Version **0.1.2** (link-java 0.1.3, contract revision 5): built and unit-tested on Fabric, Forge and NeoForge; not released yet. The
+latest published release is 0.1.1 (link-java 0.1.2, revision 4). What 0.1.2 changes: guest frames are read with link-java's size-aware call, so a
+frame whose `Frame` datagram disagrees with its slot header is skipped (contract 9.6); and a collision snapshot over the revision 5 limit of 925,696
+triangles is cut to the nearest ones and reported, never dropped silently (see "Host: how it works").
 
 This is the Minecraft 1.20.1 branch (`mc/1.20.1`) of the multi-loader layout of the 26.3 mod: the same `common` / `fabric` / `forge` / `neoforge`
 modules, retargeted to 1.20.1 (OpenGL 3.2 core, Mojang's own `RenderSystem` and shaders, Java 17).
@@ -29,7 +34,7 @@ Tested with Minecraft **1.20.1**, Gradle 8.14.3 (on JDK 21, see "Which JDK"), Ja
 | NeoForge | 47.1.106 (1.20.1) | ModDevGradle legacy 2.0.148 |
 
 One version number (`mod_version` in `gradle.properties`) goes into every jar. The jars carry the Minecraft version in their name:
-`minecraft-link-<loader>-<minecraft version>-<version>.jar`, for example `minecraft-link-forge-1.20.1-0.1.1.jar`. Quilt was not tried on 1.20.1.
+`minecraft-link-<loader>-<minecraft version>-<version>.jar`, for example `minecraft-link-forge-1.20.1-0.1.2.jar`. Quilt was not tried on 1.20.1.
 
 ## What this mod is not
 
@@ -77,7 +82,7 @@ downloads (the [Releases page](https://github.com/patodois/minecraft-link/releas
 | `/link host [port]` | listen on `127.0.0.1:port` (default 47800) for one guest |
 | `/link guest [port]` | connect to a host on `127.0.0.1:port`, retrying until one answers |
 | `/link stop` | say `bye`, half-close, drain and close (on a helper thread: the game never waits) |
-| `/link status` | role, peer, input focus, counters, frame and depth information, the GL version |
+| `/link status` | role, peer, input focus, counters, frame and depth information, the collision size limit (how many snapshots were cut to the nearest 925,696 triangles), the GL version |
 | `/link focus host\|guest` | host: give the input focus; guest: ask the host for it |
 | `/link` | same as `status` |
 
@@ -92,9 +97,9 @@ them in `<loader>/build/libs/`.
 
 | Instance runs | Drop this jar into the instance's `mods` folder | Also needed |
 |---|---|---|
-| Fabric | `fabric/build/libs/minecraft-link-fabric-1.20.1-0.1.1.jar` | [Fabric API](https://modrinth.com/mod/fabric-api) for 1.20.1 (0.92.x) |
-| Forge | `forge/build/libs/minecraft-link-forge-1.20.1-0.1.1.jar` | nothing |
-| NeoForge | `neoforge/build/libs/minecraft-link-neoforge-1.20.1-0.1.1.jar` | nothing |
+| Fabric | `fabric/build/libs/minecraft-link-fabric-1.20.1-0.1.2.jar` | [Fabric API](https://modrinth.com/mod/fabric-api) for 1.20.1 (0.92.x) |
+| Forge | `forge/build/libs/minecraft-link-forge-1.20.1-0.1.2.jar` | nothing |
+| NeoForge | `neoforge/build/libs/minecraft-link-neoforge-1.20.1-0.1.2.jar` | nothing |
 
 Use exactly these jars, the ones without a suffix: not `-dev`, not `-sources`, and not the `-slim` jar that the Forge build also leaves (it has no link-java inside).
 
@@ -102,17 +107,17 @@ Use exactly these jars, the ones without a suffix: not `-dev`, not `-sources`, a
 
 1. **Add Instance**, pick **Minecraft 1.20.1**, then **Forge** in the loader list on the right and the 47.4.28 build (or any 47.x), **OK**.
 2. Select the instance, **Edit**, **Mods**, **Add file** (or right-click the instance, **Folder**, **Minecraft Folder**, and drop the jar into `mods`),
-   and add `minecraft-link-forge-1.20.1-0.1.1.jar`.
+   and add `minecraft-link-forge-1.20.1-0.1.2.jar`.
 3. Start it with an account, or offline for a test. Prism picks Java 17 for 1.20.1 by itself.
 
 **Prism Launcher**, Fabric:
 
 1. **Add Instance**, **Minecraft 1.20.1**, loader **Fabric** (Loader 0.14.21 or newer), **OK**.
 2. **Edit**, **Mods**, **Download mods** (Modrinth) and search for **Fabric API**, pick the 0.92.x build for 1.20.1, or add the jar by hand; then
-   **Add file** and add `minecraft-link-fabric-1.20.1-0.1.1.jar`.
+   **Add file** and add `minecraft-link-fabric-1.20.1-0.1.2.jar`.
 3. Start it.
 
-NeoForge 1.20.1 (47.1.x) works the same way with `minecraft-link-neoforge-1.20.1-0.1.1.jar`, if your Prism Launcher offers NeoForge for 1.20.1 (it was tested with
+NeoForge 1.20.1 (47.1.x) works the same way with `minecraft-link-neoforge-1.20.1-0.1.2.jar`, if your Prism Launcher offers NeoForge for 1.20.1 (it was tested with
 NeoForge's own installer, not through Prism).
 
 Then, to see the occlusion:
@@ -161,7 +166,7 @@ Written with the defaults on first start. Unknown keys are ignored.
   "scale": 1.0,                // link metres per block
   "offset": [0, 0, 0],         // link position of the Minecraft origin (after flip and scale)
   "interp_delay_ms": 40,       // host: guest entities are shown this far in the past, to interpolate
-  "collision_radius": 16,      // host: blocks around the player in the collision snapshot
+  "collision_radius": 16,      // host: blocks around the player in the collision snapshot (1 to 64; over 925,696 triangles the farthest are cut)
   "collision_interval_ms": 500,// host: least time between rescans (how block changes are noticed)
   "collision_move_blocks": 1.0,// host: rescan at once after the player moved this far
   "guest_entity": 1,           // guest: entity id, and what `spawn` announces
@@ -231,6 +236,16 @@ player as triangles, counter-clockwise from outside, chunked by the link library
   of a stair), so solid ground costs only its top. A Superflat world gives about 4,600 triangles for r = 16.
 - A new scan starts when the player moved a block, or `collision_interval_ms` after the last one; an
   unchanged result is not sent again (except as a refresh every 5 s). Minecraft has no client-side block-change event to hook, so changes are found by rescanning.
+- **Size limit (contract revision 5).** A snapshot has at most 4096 chunks, that is 925,696 triangles (32 MiB on the wire), and link-java throws a
+  `WireException` for a bigger one. The mod never hands it one: a snapshot over the limit is **cut to the 925,696 triangles nearest to the player**
+  (distance from the scan centre to the closest point of the triangle; ties keep scan order, so the same world gives the same snapshot), and the
+  `radius` it announces shrinks to the distance of the nearest dropped triangle, so the guest is told what the snapshot really covers instead of
+  taking the dropped area for empty air. The cut is not silent: the first oversize snapshot (and the first one after a snapshot fit again) prints
+  `[link] collision snapshot too big: ...` in the chat and the log, and `/link status` shows `limit 925696, N cut to the nearest triangles, latest
+  A -> B (D dropped, complete within R m)`. If link-java refuses a snapshot anyway while the link is up, that is reported and counted the same way
+  (`collision snapshot not sent: ...`), not swallowed as "not connected". `collision_radius` goes up to 64 (a cube 129 blocks wide) and the triangle
+  count grows with the terrain surface inside it, so a large radius over rough or built-up land is what can reach the limit; a smaller
+  `collision_radius` avoids the cut.
 
 **Guest entities** are shown as client-side `block_display` entities (never sent to a server, never
 saved): a magenta glazed terracotta whose pattern points along the entity's front, centred on the pose, with the pose's
@@ -245,7 +260,7 @@ is shown, not roll. While a guest's frames are on screen the placeholder is hidd
 
 1. `frame_channel` names the pixel file; the frame worker maps it read-only (`PixelFile.Reader` in
    link-java: all header and depth checks of the contract, the seqlock, an unknown `depth_format` read as colour only).
-2. On each `Frame` it copies the slot, looks `camera_seq` up in a ring of the last 256 cameras sent (a second at 240 fps; the contract asks for half a second) and reprojects the
+2. On each `Frame` it copies the slot with the size-aware call `reader.read(frame, true)` (link-java 0.1.3: a frame is skipped, before any pixel is copied, when its datagram's width or height is 0 or above the file's, or differs from the slot header's; frame 0 is always skipped), looks `camera_seq` up in a ring of the last 256 cameras sent (a second at 240 fps; the contract asks for half a second) and reprojects the
    frame (colour and linear depth in metres) from that camera to the one being presented now (`Reproject`, on a helper thread).
 3. At the end of the level render the render thread uploads the result to an RGBA8 and an R32F texture and draws one fullscreen
    triangle into the main render target with a GLSL 150 program of its own (`assets/minecraft_link/shaders/core/link_frame.vsh` and `.fsh`).
@@ -318,8 +333,8 @@ git clone https://github.com/patodois/link-java            # the protocol librar
 git clone -b mc/1.20.1 https://github.com/patodois/minecraft-link
 cd minecraft-link
 export JAVA_HOME=/path/to/a/jdk-21                         # a JDK 21, not 25; see "Which JDK"
-./gradlew build --no-daemon                                # all loaders: <loader>/build/libs/minecraft-link-<loader>-1.20.1-0.1.1.jar, and the tests
-./gradlew :common:test --no-daemon                         # the 52 unit tests only
+./gradlew build --no-daemon                                # all loaders: <loader>/build/libs/minecraft-link-<loader>-1.20.1-0.1.2.jar, and the tests
+./gradlew :common:test --no-daemon                         # the 61 unit tests (and 2 more that need the Rust reference peers) only
 ./gradlew :fabric:runClient --no-daemon                    # the real client with an offline dev account (-Xmx2G, Java 17); also :forge: and :neoforge:
 ```
 

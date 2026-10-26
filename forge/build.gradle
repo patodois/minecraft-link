@@ -44,7 +44,7 @@ dependencies {
 	// The passthrough link protocol (pure Java), built from ../link-java and bundled into the jar (jarJar). In the dev run Forge's
 	// module layers only see libraries on the minecraftLibrary configuration (it also puts them on the compile classpath).
 	minecraftLibrary "dev.patodois:link-java:${rootProject.link_java_version}"
-	// A plain version here becomes the range [0.1.2,) in the jar's metadata.
+	// A plain version here becomes the range [0.1.3,) in the jar's metadata.
 	jarJar("dev.patodois:link-java:[${rootProject.link_java_version},)") {
 		jarJar.pin(it, rootProject.link_java_version)
 	}
