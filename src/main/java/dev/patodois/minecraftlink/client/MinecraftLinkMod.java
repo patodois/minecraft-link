@@ -20,7 +20,7 @@ import net.minecraftforge.fml.relauncher.Side;
  *   <li>{@code RenderWorldLastEvent}: after the world is drawn and before the hand and the GUI: camera, placeholder, guest frame.</li>
  * </ul>
  */
-@Mod(modid = MinecraftLinkMod.MODID, name = "Rewrite Link for Minecraft", version = "0.1.1", clientSideOnly = true,
+@Mod(modid = MinecraftLinkMod.MODID, name = "Rewrite Link for Minecraft", version = "0.1.2", clientSideOnly = true,
         acceptedMinecraftVersions = "[1.12.2]", acceptableRemoteVersions = "*")
 public final class MinecraftLinkMod {
     public static final String MODID = "minecraft_link";
