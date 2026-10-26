@@ -69,6 +69,11 @@ class GuestSessionTest {
             assertEquals(5, sp.spawn().entity());
             assertEquals("minecraft:player", sp.spawn().asset());
             assertEquals(0, host.unknownEntity, "the host ignored no pose");
+            // /link status shows the link's anomaly counters, the unknown_entity and spawn_ignored ones included
+            assertTrue(s.describe().endsWith(", foreign 0, unknown_entity 0, spawn_ignored 0"), s.describe());
+            s.link.unknownEntity = 3;
+            s.link.spawnIgnored = 2;
+            assertTrue(s.describe().endsWith(", unknown_entity 3, spawn_ignored 2"), s.describe());
             long until = System.currentTimeMillis() + 2000;
             while (System.currentTimeMillis() < until && count(seen, LinkEvent.Focus.class) == 0) {
                 seen.addAll(host.poll());
