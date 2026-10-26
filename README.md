@@ -4,9 +4,14 @@
 
 A client-side [Forge](https://files.minecraftforge.net) mod for Minecraft: Java Edition **1.7.10** (the version
 GregTech: New Horizons and the big tech modpacks of that era run on) that speaks the **rewrite-bridge passthrough link
-protocol v1** (`docs/CONTRACT.md` in the [`rewrite-bridge`](https://github.com/patodois/rewrite-bridge) repository, revision 4), so a running Minecraft can be a
+protocol v1** (`docs/CONTRACT.md` in the [`rewrite-bridge`](https://github.com/patodois/rewrite-bridge) repository, revision 5), so a running Minecraft can be a
 **host** or a **guest** next to any other game or rewrite that speaks it: the Rust tools, the Hytale plugin, anything
 else.
+
+**Status.** Version **0.1.2** (link-java 0.1.3, contract revision 5): built and unit-tested on Forge; not released yet. The
+latest published release is 0.1.1 (link-java 0.1.2, revision 4). What 0.1.2 changes: guest frames are read with link-java's size-aware call, so a
+frame whose `Frame` datagram disagrees with its slot header is skipped (contract 9.6); and a collision snapshot over the revision 5 limit of 925,696
+triangles is cut to the nearest ones and reported, never dropped silently (see "Host: how it works").
 
 - **Host** (you play in Minecraft): sends your camera every rendered frame and the collision shapes around you,
   shows the guest's entity in the world, and draws the guest's rendered frames inside the world, hidden correctly
@@ -65,7 +70,7 @@ see the table in the [main README](https://github.com/patodois/minecraft-link#mi
 ## Install
 
 Download `minecraft-link-forge-1.7.10-0.1.0.jar` from the [release `mc-1.7.10-v0.1.0`](https://github.com/patodois/minecraft-link/releases/tag/mc-1.7.10-v0.1.0) on the Releases page
-(all releases of this version: [`mc-1.7.10-v*`](https://github.com/patodois/minecraft-link/releases?q=mc-1.7.10-v)), or build the jar (below): `build/libs/minecraft-link-forge-1.7.10-0.1.1.jar`. Use exactly that one, the file without a suffix: not the `-dev` jar, which is
+(all releases of this version: [`mc-1.7.10-v*`](https://github.com/patodois/minecraft-link/releases?q=mc-1.7.10-v)), or build the jar (below): `build/libs/minecraft-link-forge-1.7.10-0.1.2.jar`. Use exactly that one, the file without a suffix: not the `-dev` jar, which is
 the deobfuscated one for development runs and does not load in a real game (the one exception is the lwjgl3ify test below, which wants it).
 
 1. In Prism Launcher make (or use) an instance for **Minecraft 1.7.10 with Forge** (10.13.4.1614, Prism's Edit
@@ -82,7 +87,7 @@ the deobfuscated one for development runs and does not load in a real game (the 
 | `/link host [port]` | listen on `127.0.0.1:port` (default 47800) for one guest |
 | `/link guest [port]` | connect to a host on `127.0.0.1:port`, retrying until one answers |
 | `/link stop` | say `bye`, half-close, drain and close (on a helper thread: the game never waits) |
-| `/link status` | role, peer, input focus, counters, frame and depth information |
+| `/link status` | role, peer, input focus, counters, frame and depth information, the collision size limit (how many snapshots were cut to the nearest 925,696 triangles) |
 | `/link focus host\|guest` | host: give the input focus; guest: ask the host for it |
 | `/link` | same as `status` |
 
@@ -114,7 +119,7 @@ Written with the defaults on first start. Unknown keys are ignored.
   "scale": 1.0,                // link metres per block
   "offset": [0, 0, 0],         // link position of the Minecraft origin (after flip and scale)
   "interp_delay_ms": 40,       // host: guest entities are shown this far in the past, to interpolate
-  "collision_radius": 16,      // host: blocks around the player in the collision snapshot
+  "collision_radius": 16,      // host: blocks around the player in the collision snapshot (1 to 64; over 925,696 triangles the farthest are cut)
   "collision_interval_ms": 500,// host: least time between rescans (how block changes are noticed)
   "collision_move_blocks": 1.0,// host: rescan at once after the player moved this far
   "guest_entity": 1,           // guest: entity id, and what `spawn` announces
@@ -182,6 +187,16 @@ counter-clockwise from outside, chunked by the link library.
   a time); triangles are built, mapped and hashed on a helper thread. A face is left out when a full block sits behind
   it, and where two boxes of one block touch (the inside of a stair). A new scan starts when the player moved a block,
   or `collision_interval_ms` after the last one; an unchanged result is not sent again (except as a refresh every 5 s).
+- **Size limit (contract revision 5).** A snapshot has at most 4096 chunks, that is 925,696 triangles (32 MiB on the wire), and link-java throws a
+  `WireException` for a bigger one. The mod never hands it one: a snapshot over the limit is **cut to the 925,696 triangles nearest to the player**
+  (distance from the scan centre to the closest point of the triangle; ties keep scan order, so the same world gives the same snapshot), and the
+  `radius` it announces shrinks to the distance of the nearest dropped triangle, so the guest is told what the snapshot really covers instead of
+  taking the dropped area for empty air. The cut is not silent: the first oversize snapshot (and the first one after a snapshot fit again) prints
+  `[link] collision snapshot too big: ...` in the chat and the log, and `/link status` shows `limit 925696, N cut to the nearest triangles, latest
+  A -> B (D dropped, complete within R m)`. If link-java refuses a snapshot anyway while the link is up, that is reported and counted the same way
+  (`collision snapshot not sent: ...`), not swallowed as "not connected". `collision_radius` goes up to 64 (a cube 129 blocks wide) and the triangle
+  count grows with the terrain surface inside it, so a large radius over rough or built-up land is what can reach the limit; a smaller
+  `collision_radius` avoids the cut.
 
 **Guest entities** are drawn as a **placeholder cube** straight into the world pass (a magenta cube, 1 m wide times
 the pose's scale, centred on the pose, its front face yellow), placed every rendered frame from the pose track at
@@ -193,7 +208,7 @@ is sent to a server or saved) and is hidden while a guest's frames are on screen
 
 1. `frame_channel` names the pixel file; the frame worker maps it read-only (`PixelFile.Reader` in link-java: all
    header and depth checks of the contract, the seqlock).
-2. On each `Frame` it copies the slot (colour and linear depth in metres), looks `camera_seq` up in a ring of the last
+2. On each `Frame` it copies the slot (colour and linear depth in metres) with the size-aware call `reader.read(frame, true)` (link-java 0.1.3: a frame is skipped, before any pixel is copied, when its datagram's width or height is 0 or above the file's, or differs from the slot header's; frame 0 is always skipped), looks `camera_seq` up in a ring of the last
    256 cameras sent (a second at 240 fps; the contract asks for half a second) and reprojects the frame to the camera being presented now (`Reproject`, on a helper thread).
 3. At `RenderWorldLastEvent` the render thread uploads the result to an RGBA8 texture and a 32-bit float texture
    (`GL_LUMINANCE32F_ARB`), copies the game's **depth buffer** into a `GL_DEPTH_COMPONENT24` texture with
@@ -239,8 +254,8 @@ git clone https://github.com/patodois/link-java                  # the protocol 
 git clone -b mc/1.7.10 https://github.com/patodois/minecraft-link
 cd minecraft-link
 export JAVA_HOME=/opt/homebrew/opt/openjdk@25                    # or any JDK 25
-./gradlew build --no-daemon          # build/libs/minecraft-link-forge-1.7.10-0.1.1.jar (reobfuscated, link-java merged in), runs the tests
-./gradlew test --no-daemon           # 52 unit tests, no game needed
+./gradlew build --no-daemon          # build/libs/minecraft-link-forge-1.7.10-0.1.2.jar (reobfuscated, link-java merged in), runs the tests
+./gradlew test --no-daemon           # 61 unit tests (and 2 more that need the Rust reference peers), no game needed
 ./gradlew runClient --no-daemon      # the real client, deobfuscated dev environment, offline dev account, -Xmx1500m
 ./gradlew runObfClient --no-daemon   # the real client with the reobfuscated release jar, as a player's game runs it
 ```
@@ -293,7 +308,7 @@ provides.
 
 To test, copy [ExampleMod1.7.10](https://github.com/GTNewHorizons/ExampleMod1.7.10) somewhere, put the `-dev.jar`
 that `./gradlew build` leaves in `build/libs` into its `libs/`, add
-`runtimeOnlyNonPublishable(files("libs/minecraft-link-forge-1.7.10-0.1.1-dev.jar"))` to its `dependencies.gradle`, and run its
+`runtimeOnlyNonPublishable(files("libs/minecraft-link-forge-1.7.10-0.1.2-dev.jar"))` to its `dependencies.gradle`, and run its
 `./gradlew runClient25` (or `runClient21`, `runClient17`; GTNHGradle's tasks for lwjgl3ify, Hodgepodge and UniMixins).
 The result of that test is below. In this repository's own builds nothing of this is configured.
 
