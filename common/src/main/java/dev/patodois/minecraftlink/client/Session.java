@@ -4,8 +4,10 @@ import dev.patodois.minecraftlink.CollisionCap;
 import dev.patodois.minecraftlink.LinkSettings;
 import dev.patodois.minecraftlink.Mapping;
 import dev.patodois.minecraftlink.PoseTrack;
+import dev.patodois.minecraftlink.TokenAuth;
 import dev.patodois.rewritelink.Control;
 import dev.patodois.rewritelink.Control.Role;
+import dev.patodois.rewritelink.Endpoint;
 import dev.patodois.rewritelink.Link;
 import dev.patodois.rewritelink.LinkConfig;
 import dev.patodois.rewritelink.LinkEvent;
@@ -13,6 +15,7 @@ import dev.patodois.rewritelink.LinkRunner;
 import dev.patodois.rewritelink.Wire;
 import dev.patodois.rewritelink.Wire.WireException;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -64,6 +67,14 @@ final class Session {
     final long startedMs = System.currentTimeMillis();
     /** The control port the host listens on (or the guest connects to), read once so the game thread never asks the link. */
     final int controlPort;
+    /** Contract revision 6: whether this session uses the link token, and the endpoint file it writes (host) or reads (guest). */
+    final boolean tokenAuth;
+    final Path endpointFile;
+    /** Handshakes refused for the token (host: guests turned away; guest: times the host turned us away), and when the player was last told. */
+    final AtomicLong unauthorized = new AtomicLong();
+    private volatile long lastUnauthorizedNoticeMs;
+    /** The player is told about an unauthorized refusal at most this often; a guest retries every half second. */
+    static final long UNAUTHORIZED_NOTICE_MS = 30_000;
 
     // ---- game thread -> link thread
     private final AtomicReference<Wire.Camera> cameraOut = new AtomicReference<>();
@@ -110,9 +121,11 @@ final class Session {
 
     private volatile boolean spawnPending;
 
-    private Session(Role role, LinkSettings settings, Link link, String localName) {
+    private Session(Role role, LinkSettings settings, Link link, String localName, Path endpointFile) {
         this.role = role;
         this.settings = settings;
+        this.tokenAuth = endpointFile != null;
+        this.endpointFile = endpointFile;
         this.mapping = settings.mapping();
         this.link = link;
         this.controlPort = role == Role.HOST ? link.controlPort() : settings.port;
@@ -126,8 +139,16 @@ final class Session {
         cfg.udpPort = settings.udpPort;
         cfg.heartbeatMs = settings.heartbeatMs;
         cfg.timeoutMs = settings.timeoutMs;
+        Path endpointFile = null;
+        if (settings.tokenAuth) {
+            // link-java makes the token (host), writes the file after binding and removes it on close; a guest reads the file before each
+            // attempt. This class never sees the token.
+            endpointFile = settings.endpointPath();
+            cfg.endpointFile = endpointFile;
+            if (role == Role.HOST) TokenAuth.prepareDirectory(endpointFile);
+        }
         Link link = role == Role.HOST ? Link.host(cfg) : Link.guest(cfg);
-        Session s = new Session(role, settings, link, localName);
+        Session s = new Session(role, settings, link, localName, endpointFile);
         s.runner.start();
         return s;
     }
@@ -252,7 +273,11 @@ final class Session {
             focusOut.set(null);
             messages.add("link lost: " + l.reason());
         } else if (e instanceof LinkEvent.HandshakeFailed h) {
-            messages.add("handshake failed: " + h.reason());
+            if (TokenAuth.isUnauthorized(h.reason())) {
+                noticeUnauthorized();
+            } else {
+                messages.add("handshake failed: " + h.reason());
+            }
         } else if (e instanceof LinkEvent.Spawn s) {
             Control.Spawn sp = s.spawn();
             if (role == Role.HOST) {
@@ -291,6 +316,35 @@ final class Session {
         }
     }
 
+    /** A refused token (CONTRACT 6.2): counted every time, told to the player now and then. The text never holds a token. */
+    private void noticeUnauthorized() {
+        unauthorized.incrementAndGet();
+        long now = System.currentTimeMillis();
+        if (lastUnauthorizedNoticeMs != 0 && now - lastUnauthorizedNoticeMs < UNAUTHORIZED_NOTICE_MS) return;
+        lastUnauthorizedNoticeMs = now;
+        if (role == Role.HOST) {
+            messages.add("refused a guest as unauthorized: it sent no token or a wrong one");
+        } else if (tokenAuth) {
+            messages.add("the host refused this guest as unauthorized: it did not accept the token in the endpoint file; the file is read again before each try");
+        } else {
+            messages.add("the host refused this guest as unauthorized: it wants a token. Set token_auth to true (and endpoint_file to the host's file) in config/minecraft-link.json");
+        }
+    }
+
+    /** Guest with a token: the control port the endpoint file names right now, or -1 with the reason in {@code endpointProblem}. */
+    private volatile String endpointProblem = "";
+
+    private int guestPortFromEndpoint() {
+        try {
+            int p = Endpoint.read(endpointFile).controlPort();
+            endpointProblem = "";
+            return p;
+        } catch (IOException | RuntimeException e) {
+            endpointProblem = String.valueOf(e.getMessage()); // link-java's messages never quote the file; none holds the token
+            return -1;
+        }
+    }
+
     // ------------------------------------------------------------------ closing
 
     /** Says despawn (guest) and bye, half-closes and drains; blocks for up to a fraction of a second. Call off the game thread. */
@@ -326,10 +380,17 @@ final class Session {
     String describe() {
         StringBuilder b = new StringBuilder();
         b.append(role.wire).append(" on 127.0.0.1:");
-        b.append(controlPort);
+        int shownPort = controlPort;
+        if (tokenAuth && role == Role.GUEST) {
+            int fromFile = guestPortFromEndpoint();
+            if (fromFile > 0) shownPort = fromFile;
+        }
+        b.append(shownPort);
+        if (tokenAuth) b.append(", token auth on");
         LinkEvent.PeerInfo p = peer;
         if (p == null) {
             b.append(role == Role.HOST ? ", waiting for a guest" : ", looking for a host");
+            if (tokenAuth && role == Role.GUEST && !endpointProblem.isEmpty()) b.append(" (endpoint file: ").append(endpointProblem).append(")");
         } else {
             b.append(", connected to ").append(p.game()).append(" (session ").append(Integer.toHexString(p.session())).append(")");
             b.append(", input focus with the ").append(focus.wire);
@@ -343,6 +404,7 @@ final class Session {
         } else {
             b.append("; sent ").append(posesSent.get()).append(" poses; received ").append(camerasReceived.get()).append(" cameras");
         }
+        if (unauthorized.get() > 0) b.append("; ").append(unauthorized.get()).append(" refused as unauthorized");
         b.append("; datagrams in/out ").append(link.datagramsReceived).append("/").append(link.datagramsSent)
                 .append(", malformed ").append(link.malformed).append(", stale ").append(link.stale).append(", foreign ").append(link.foreign)
                 .append(", unknown_entity ").append(link.unknownEntity).append(", spawn_ignored ").append(link.spawnIgnored);
