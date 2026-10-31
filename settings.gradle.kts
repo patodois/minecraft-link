@@ -23,4 +23,5 @@ plugins {
 
 // The protocol library lives in its own repository next to this one; Gradle builds it from source
 // and the mod jar bundles it (see build.gradle.kts).
-includeBuild("../link-java")
+// -PlinkJavaDir=<path> points at another checkout than ../link-java (for example a clean one while ../link-java has uncommitted work).
+includeBuild(providers.gradleProperty("linkJavaDir").getOrElse("../link-java")) { name = "link-java" } // build.gradle.kts asks for it by this name
