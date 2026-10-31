@@ -27,8 +27,19 @@ This page (`main`) is the Minecraft 26.3 mod.
 
 **Download.** The jars of each version are attached to a release on the [Releases page](https://github.com/patodois/minecraft-link/releases). A release is named after its
 tag, `mc-<Minecraft version>-v<mod version>` (for example `mc-26.3-v0.1.0`), and holds the jars to install for that
-Minecraft version plus a `SHA256SUMS` file to check them against. The jars are not signed. They contain no Mojang or loader
+Minecraft version plus a `SHA256SUMS` file to check them against. The jars themselves are not signed; the list is (below). They contain no Mojang or loader
 code. To build them yourself instead, see "Build and test" below.
+
+`SHA256SUMS.sig` on the same release signs `SHA256SUMS` with the project's Ed25519 release key, so you can also check
+that the list itself came from here. With the downloads in one folder (needs OpenSSL 3):
+
+```sh
+sh tools/verify-release.sh minecraft-link mc-26.3-v0.1.2 path/to/folder
+```
+
+The signed text is `osp release patodois/minecraft-link <tag>`, a newline, then `SHA256SUMS`, so a signature from another release
+does not verify. The public key is in `RELEASE-KEY.pem` (SHA-256 of its DER form
+`26c35ed9930be42fd266852135e2e81eb74c36ed9a2d0c527e86210a3dcb0946`), and the script carries the same key.
 
 ```sh
 git clone https://github.com/patodois/minecraft-link
