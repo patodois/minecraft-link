@@ -47,4 +47,26 @@ class LinkSettingsTest {
         assertThrows(JsonParseException.class, () -> LinkSettings.parse("{\"scale\":-1}"));
         assertThrows(JsonParseException.class, () -> LinkSettings.parse("{\"offset\":[1,2]}"));
     }
+
+    @Test
+    void tokenSettingsAreOffByDefaultAndRoundTrip() {
+        LinkSettings d = new LinkSettings();
+        assertFalse(d.tokenAuth, "default OFF for compatibility");
+        assertEquals("", d.endpointFile);
+        LinkSettings back = LinkSettings.parse(d.toJson());
+        assertFalse(back.tokenAuth);
+        assertEquals("", back.endpointFile);
+        LinkSettings s = LinkSettings.parse("{\"token_auth\":true,\"endpoint_file\":\"/tmp/x/minecraft-java.json\"}");
+        assertTrue(s.tokenAuth);
+        assertEquals(java.nio.file.Paths.get("/tmp/x/minecraft-java.json"), s.endpointPath());
+        assertTrue(LinkSettings.parse(s.toJson()).tokenAuth);
+        assertEquals("/tmp/x/minecraft-java.json", LinkSettings.parse(s.toJson()).endpointFile);
+        // the token is never a setting
+        assertFalse(d.toJson().contains("\"token\""));
+    }
+
+    @Test
+    void rejectsAnEndpointFileThatIsNotAPath() {
+        assertThrows(JsonParseException.class, () -> LinkSettings.parse("{\"endpoint_file\":\"a\\u0000b\"}"));
+    }
 }

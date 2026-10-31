@@ -11,7 +11,9 @@ import com.google.gson.JsonPrimitive;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 
 /** {@code config/minecraft-link.json}. Unknown keys are ignored, missing keys take the defaults below. */
 public final class LinkSettings {
@@ -44,6 +46,19 @@ public final class LinkSettings {
     public int timeoutMs = 2000;
     /** Host: draw the pixel-file frames of a guest (needs the guest to announce a frame_channel). */
     public boolean showFrames = true;
+    /**
+     * Optional link token (contract revision 6), default off so a mod without it keeps working with every other program. Host: make a token,
+     * write it with the bound port to {@link #endpointFile} and remove the file on stop; the host then refuses a guest without it. Guest:
+     * read {@link #endpointFile} before each attempt and send its token. The token is never in this file, in the logs or in the chat.
+     */
+    public boolean tokenAuth = false;
+    /** The endpoint file for {@link #tokenAuth}; empty = the recommended place for this system (see {@link TokenAuth#defaultFile()}). */
+    public String endpointFile = "";
+
+    /** The endpoint file of {@link #tokenAuth}: the configured path, or the recommended default. */
+    public Path endpointPath() {
+        return endpointFile.trim().isEmpty() ? TokenAuth.defaultFile() : Paths.get(endpointFile.trim());
+    }
 
     public Mapping mapping() {
         return new Mapping(flipX, flipZ, scale, offset);
@@ -78,6 +93,13 @@ public final class LinkSettings {
         s.heartbeatMs = Math.max(10, Math.min(10000, intIn(o, "heartbeat_ms", s.heartbeatMs, Integer.MIN_VALUE, Integer.MAX_VALUE)));
         s.timeoutMs = intIn(o, "timeout_ms", s.timeoutMs, 100, 600000);
         s.showFrames = bool(o, "show_frames", s.showFrames);
+        s.tokenAuth = bool(o, "token_auth", s.tokenAuth);
+        s.endpointFile = str(o, "endpoint_file", s.endpointFile);
+        try {
+            if (!s.endpointFile.trim().isEmpty()) Paths.get(s.endpointFile.trim());
+        } catch (InvalidPathException e) {
+            throw new JsonParseException("endpoint_file is not a valid path");
+        }
         return s;
     }
 
@@ -102,6 +124,8 @@ public final class LinkSettings {
         o.addProperty("heartbeat_ms", heartbeatMs);
         o.addProperty("timeout_ms", timeoutMs);
         o.addProperty("show_frames", showFrames);
+        o.addProperty("token_auth", tokenAuth);
+        o.addProperty("endpoint_file", endpointFile);
         return GSON.toJson(o) + "\n";
     }
 

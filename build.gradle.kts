@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "dev.patodois"
-version = "0.1.2"
+version = "0.2.0"
 
 java {
     toolchain {
@@ -26,7 +26,8 @@ repositories {
 // The passthrough link protocol (pure Java 8), built from ../link-java and merged into the mod jar.
 // A plain jar file dependency (built by the included build first), not a project dependency: RetroFuturaGradle asks
 // every dependency for its "deobfuscated" variant, which a project of another build cannot offer.
-val linkJavaJar = file("../link-java/build/libs/link-java-0.1.3.jar")
+val linkJavaDir = (findProperty("linkJavaDir") ?: "../link-java").toString() // same property as settings.gradle.kts
+val linkJavaJar = file("$linkJavaDir/build/libs/link-java-0.2.0.jar")
 val buildLinkJava = gradle.includedBuild("link-java").task(":jar")
 
 dependencies {
