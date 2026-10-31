@@ -4,13 +4,15 @@
 
 A client-side mod for Minecraft: Java Edition **1.20.1** on **Fabric**, **Forge** and **NeoForge** (the 1.20.1 fork, 47.1.x) that speaks the
 **rewrite-bridge passthrough link protocol v1** (`docs/CONTRACT.md` in the `rewrite-bridge`
-repository, revision 5), so a running Minecraft can be a **host** or a **guest** next to any other
+repository, revision 6), so a running Minecraft can be a **host** or a **guest** next to any other
 game or rewrite that speaks it: the Rust tools, the Hytale plugin, anything else.
 
-**Status.** Version **0.1.2** (link-java 0.1.3, contract revision 5): built and unit-tested on Fabric, Forge and NeoForge; released as [mc-1.20.1-v0.1.2](https://github.com/patodois/minecraft-link/releases/tag/mc-1.20.1-v0.1.2) after the live interop matrix passed 50/50 pairs on 2026-10-26. The
-latest published release is 0.1.1 (link-java 0.1.2, revision 4). What 0.1.2 changes: guest frames are read with link-java's size-aware call, so a
+**Status.** Version **0.2.0** (link-java 0.2.0, contract revision 6), released as [mc-1.20.1-v0.2.0](https://github.com/patodois/minecraft-link/releases/tag/mc-1.20.1-v0.2.0): the optional link token, **off by default**, see "Link token" below. The
+previous release is [mc-1.20.1-v0.1.2](https://github.com/patodois/minecraft-link/releases/tag/mc-1.20.1-v0.1.2) (link-java 0.1.3, revision 5, live interop matrix 50/50 pairs on 2026-10-26). What 0.1.2 changed: guest frames are read with link-java's size-aware call, so a
 frame whose `Frame` datagram disagrees with its slot header is skipped (contract 9.6); and a collision snapshot over the revision 5 limit of 925,696
 triangles is cut to the nearest ones and reported, never dropped silently (see "Host: how it works").
+
+**Live matrix of 0.2.0** (`bridge-live`, 2026-10-31, link-java 0.2.0, Minecraft windows on screen, sound off): the plain pairs of this version (token off, as in 0.1.2) passed 15/16; the one failure, `mc-1.20.1-fabric/hytale-host`, is the Hytale plugin applying none of this mod's poses, and the 0.1.2 build fails it the same way against the same plugin. With the token on: the 8 token pairs (3 loaders as host and as guest of the scripted peer, plus the wrong-token pair in each role on Fabric) passed, and the wrong token was refused with `bye unauthorized` in both roles with the notice shown once.
 
 This is the Minecraft 1.20.1 branch (`mc/1.20.1`) of the multi-loader layout of the 26.3 mod: the same `common` / `fabric` / `forge` / `neoforge`
 modules, retargeted to 1.20.1 (OpenGL 3.2 core, Mojang's own `RenderSystem` and shaders, Java 17).
@@ -34,7 +36,7 @@ Tested with Minecraft **1.20.1**, Gradle 8.14.3 (on JDK 21, see "Which JDK"), Ja
 | NeoForge | 47.1.106 (1.20.1) | ModDevGradle legacy 2.0.148 |
 
 One version number (`mod_version` in `gradle.properties`) goes into every jar. The jars carry the Minecraft version in their name:
-`minecraft-link-<loader>-<minecraft version>-<version>.jar`, for example `minecraft-link-forge-1.20.1-0.1.2.jar`. Quilt was not tried on 1.20.1.
+`minecraft-link-<loader>-<minecraft version>-<version>.jar`, for example `minecraft-link-forge-1.20.1-0.2.0.jar`. Quilt was not tried on 1.20.1.
 
 ## What this mod is not
 
@@ -97,9 +99,9 @@ them in `<loader>/build/libs/`.
 
 | Instance runs | Drop this jar into the instance's `mods` folder | Also needed |
 |---|---|---|
-| Fabric | `fabric/build/libs/minecraft-link-fabric-1.20.1-0.1.2.jar` | [Fabric API](https://modrinth.com/mod/fabric-api) for 1.20.1 (0.92.x) |
-| Forge | `forge/build/libs/minecraft-link-forge-1.20.1-0.1.2.jar` | nothing |
-| NeoForge | `neoforge/build/libs/minecraft-link-neoforge-1.20.1-0.1.2.jar` | nothing |
+| Fabric | `fabric/build/libs/minecraft-link-fabric-1.20.1-0.2.0.jar` | [Fabric API](https://modrinth.com/mod/fabric-api) for 1.20.1 (0.92.x) |
+| Forge | `forge/build/libs/minecraft-link-forge-1.20.1-0.2.0.jar` | nothing |
+| NeoForge | `neoforge/build/libs/minecraft-link-neoforge-1.20.1-0.2.0.jar` | nothing |
 
 Use exactly these jars, the ones without a suffix: not `-dev`, not `-sources`, and not the `-slim` jar that the Forge build also leaves (it has no link-java inside).
 
@@ -107,17 +109,17 @@ Use exactly these jars, the ones without a suffix: not `-dev`, not `-sources`, a
 
 1. **Add Instance**, pick **Minecraft 1.20.1**, then **Forge** in the loader list on the right and the 47.4.28 build (or any 47.x), **OK**.
 2. Select the instance, **Edit**, **Mods**, **Add file** (or right-click the instance, **Folder**, **Minecraft Folder**, and drop the jar into `mods`),
-   and add `minecraft-link-forge-1.20.1-0.1.2.jar`.
+   and add `minecraft-link-forge-1.20.1-0.2.0.jar`.
 3. Start it with an account, or offline for a test. Prism picks Java 17 for 1.20.1 by itself.
 
 **Prism Launcher**, Fabric:
 
 1. **Add Instance**, **Minecraft 1.20.1**, loader **Fabric** (Loader 0.14.21 or newer), **OK**.
 2. **Edit**, **Mods**, **Download mods** (Modrinth) and search for **Fabric API**, pick the 0.92.x build for 1.20.1, or add the jar by hand; then
-   **Add file** and add `minecraft-link-fabric-1.20.1-0.1.2.jar`.
+   **Add file** and add `minecraft-link-fabric-1.20.1-0.2.0.jar`.
 3. Start it.
 
-NeoForge 1.20.1 (47.1.x) works the same way with `minecraft-link-neoforge-1.20.1-0.1.2.jar`, if your Prism Launcher offers NeoForge for 1.20.1 (it was tested with
+NeoForge 1.20.1 (47.1.x) works the same way with `minecraft-link-neoforge-1.20.1-0.2.0.jar`, if your Prism Launcher offers NeoForge for 1.20.1 (it was tested with
 NeoForge's own installer, not through Prism).
 
 Then, to see the occlusion:
@@ -174,12 +176,42 @@ Written with the defaults on first start. Unknown keys are ignored.
   "guest_asset": "minecraft:player",
   "heartbeat_ms": 250,
   "timeout_ms": 2000,
-  "show_frames": true          // host: draw the guest's pixel-file frames
+  "show_frames": true,         // host: draw the guest's pixel-file frames
+  "token_auth": false,         // the link token (contract revision 6), off by default: see "Link token"
+  "endpoint_file": ""          // token_auth: the endpoint file; "" = the recommended place for this system
 }
 ```
 
 `offset` is how the two worlds are lined up: the feet of a player standing on a 1.20.1 Superflat world are at y = -60,
 a Rust guest's ground is y = 0, so the runs used for the screenshots below have `"offset": [0, 60, 0]`.
+
+## Link token (optional, contract revision 6)
+
+Any program on this machine that can open a TCP connection to `127.0.0.1` can start a session with a host. The token closes that door: a host
+that has one answers every guest that does not send it with `bye unauthorized`. It keeps out other users of the machine and any process that cannot
+read your files, and it defeats a program that grabs the control port before the host starts. It does not protect against a process running as you
+(it can read the file and the game's memory anyway), against root, or against anyone reading the clear-text loopback traffic (CONTRACT 6.2 has the full list).
+
+**It is off by default**, so a Minecraft with this mod keeps working with every other program exactly as before (a host without a token accepts any
+guest, and a guest without one sends none). To use it, set `"token_auth": true` on both sides:
+
+- **Host** (`/link host`): link-java makes a new token (32 bytes from `SecureRandom`, 64 hex digits) every time the host starts, binds the control port and **then**
+  writes the endpoint file `{"control_port":N,"token":"..."}` atomically, with mode `rw-------` from the moment it exists, and removes it when the link stops, when
+  you leave the world and when the game quits. A game that crashes leaves it behind; its token dies with it. The mod makes the file's directory (mode `rwx------`) when it is missing.
+  With `port` 0 or taken the file still names the port the host really got (a host that cannot bind writes no file).
+- **Guest** (`/link guest`): reads the endpoint file before every attempt, takes the port **and** the token from it (the `port` setting is not used while `token_auth` is on),
+  and sends the token in its `hello`. It refuses a file that is not a regular file, that is readable by the group or others, or that is not valid; a missing file means
+  the host is not up yet and it tries again. After `unauthorized` it reads the file again, because the host may have restarted with a new token.
+
+`endpoint_file` is the same setting on both sides and the two have to agree. Empty means the recommended place of CONTRACT 6.2 with the name `minecraft-java.json`:
+macOS `~/Library/Application Support/rewrite-link/minecraft-java.json`, Linux `$XDG_RUNTIME_DIR/rewrite-link/minecraft-java.json` (without it `~/.cache/rewrite-link/`), Windows
+`%LOCALAPPDATA%\rewrite-link\minecraft-java.json`. Two Minecraft clients on one machine therefore need no further setting. A Minecraft guest of another game's host
+sets `endpoint_file` to the file that host writes; an absolute path is best. The same applies the other way round when another program is the guest of this host.
+
+What you see: `/link status` says `token auth on` and, once a guest was turned away, `N refused as unauthorized`; the player is told once (and then at most every 30 s) with
+`[link] refused a guest as unauthorized: it sent no token or a wrong one` on the host and `the host refused this guest as unauthorized: ...` on the guest. **The token is never logged,
+never shown in the chat or in `/link status`, and never in an exception message** (so not in a crash report); the mod does not hold it at all, link-java does. The file holds it in clear
+text, readable by you only: do not copy it anywhere.
 
 ## Coordinates (CONTRACT section 4)
 
@@ -333,8 +365,8 @@ git clone https://github.com/patodois/link-java            # the protocol librar
 git clone -b mc/1.20.1 https://github.com/patodois/minecraft-link
 cd minecraft-link
 export JAVA_HOME=/path/to/a/jdk-21                         # a JDK 21, not 25; see "Which JDK"
-./gradlew build --no-daemon                                # all loaders: <loader>/build/libs/minecraft-link-<loader>-1.20.1-0.1.2.jar, and the tests
-./gradlew :common:test --no-daemon                         # the 61 unit tests (and 2 more that need the Rust reference peers) only
+./gradlew build --no-daemon                                # all loaders: <loader>/build/libs/minecraft-link-<loader>-1.20.1-0.2.0.jar, and the tests
+./gradlew :common:test --no-daemon                         # the 71 unit tests (and 2 more that need the Rust reference peers) only
 ./gradlew :fabric:runClient --no-daemon                    # the real client with an offline dev account (-Xmx2G, Java 17); also :forge: and :neoforge:
 ```
 
@@ -367,7 +399,7 @@ Forge and NeoForge jars are reobfuscated to SRG names by `reobfJarJar` and
 Unit tests (JUnit 5, in `common`): the coordinate mapping, camera matrix conversion (the view rotation against a real `PoseStack`, bobbing and
 `splitProjectionBob`, the four depth conventions, rewriting, linear depth), collision triangles for a full block, a slab and stairs, **both from hand-written
 boxes and from Minecraft's own block shapes** (the registries are bootstrapped; no window needed), pose interpolation, reprojection, the camera ring and
-the settings file. It also runs the guest role (a `Session`) against a link-java host in-process: `spawn` arrives before the first pose, `despawn` on stop, and the host ignores no pose. With `RUST_FAKE_HOST_PORT=<port>` set it runs the same `Session` as a guest of the Rust `fake_host --port <port>` instead (the evidence is that host's log), and with `RUST_FAKE_GUEST_PORT=<port>` as the host of a `fake_guest --port <port>` you started.
+the settings file, and the token: default places of the endpoint file, the settings, two `Session`s with a real endpoint file (connect, wrong token, no token, group-readable file refused, file removed on stop, the token nowhere in the status or the notices). It also runs the guest role (a `Session`) against a link-java host in-process: `spawn` arrives before the first pose, `despawn` on stop, and the host ignores no pose. With `RUST_FAKE_HOST_PORT=<port>` set it runs the same `Session` as a guest of the Rust `fake_host --port <port>` instead (the evidence is that host's log), and with `RUST_FAKE_GUEST_PORT=<port>` as the host of a `fake_guest --port <port>` you started.
 
 ### Scripted client runs
 
