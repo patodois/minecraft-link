@@ -7,6 +7,8 @@ A client-side mod for Minecraft: Java Edition on **Fabric** (and **Quilt**, with
 repository, revision 6), so a running Minecraft can be a **host** or a **guest** next to any other
 game or rewrite that speaks it: the Rust tools, the Hytale plugin, anything else.
 
+**Adding this to a game.** Read the [guide to adding a game](https://github.com/patodois/rewrite-bridge/blob/main/docs/INTEGRATING.md) first. This mod is its worked example of a Java host and guest: it bundles link-java and, per this README, is built and tested on Fabric (and Quilt), NeoForge and Forge.
+
 **Status.** Version **0.2.0** (link-java 0.2.0, contract revision 6), released as [mc-26.3-v0.2.0](https://github.com/patodois/minecraft-link/releases/tag/mc-26.3-v0.2.0): the optional link token, **off by default**, see "Link token" below. The
 previous release is [mc-26.3-v0.1.2](https://github.com/patodois/minecraft-link/releases/tag/mc-26.3-v0.1.2) (link-java 0.1.3, revision 5, live interop matrix 50/50 pairs on 2026-10-26). What 0.1.2 changed: guest frames are read with link-java's size-aware call, so a
 frame whose `Frame` datagram disagrees with its slot header is skipped (contract 9.6); and a collision snapshot over the revision 5 limit of 925,696
