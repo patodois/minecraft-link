@@ -124,4 +124,27 @@ class PoseTrackTest {
         t.add(extreme(1_100_000, 0, Float.MAX_VALUE, 0));
         assertEquals(0f, t.at(1_050_000).scale()[0], 1f);
     }
+
+    @Test
+    void aRotationThatIsNotAUnitQuaternionIsNormalisedBeforeItIsUsed() {
+        // 90 degrees about +Y written with length 2: the front is +X (yaw -90), not what a quaternion of length 2 gives as it is
+        PoseTrack t = new PoseTrack();
+        t.add(new Wire.Pose(1, 0, 1_000_000, new float[3], new float[] {0, (float) Math.sqrt(2), 0, (float) Math.sqrt(2)}, new float[] {1, 1, 1},
+                new float[3], new float[3]));
+        for (long at : new long[] {1_000_000, 1_100_000}) {
+            float[] r = t.at(at).rotation();
+            float[] f = dev.patodois.rewritelink.Quat.rotate(r, new float[] {0, 0, 1});
+            assertEquals(1.0, f[0], 1e-5, "front x at " + at);
+            assertEquals(0.0, f[2], 1e-5, "front z at " + at);
+        }
+    }
+
+    @Test
+    void aRotationOfLengthZeroIsSkipped() {
+        PoseTrack t = new PoseTrack();
+        t.add(new Wire.Pose(1, 0, 1_000_000, new float[3], new float[4], new float[] {1, 1, 1}, new float[3], new float[3]));
+        assertNull(t.at(1_000_000), "no pose from a rotation of length 0");
+        t.add(pose(1_100_000, 3, 0, 0));
+        assertEquals(3.0, t.at(1_100_000).translation()[0], 1e-9, "the next good one is taken");
+    }
 }
