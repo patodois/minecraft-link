@@ -149,4 +149,32 @@ class CollisionBuilderTest {
         assertEquals(a, b);
         assertTrue(a != c);
     }
+
+    @Test
+    void aSolidWithinTheAnnouncedSphereIsNotLeftOutWhenTheCentreIsFractional() {
+        // The snapshot announces the player's exact position and the radius. The player stands at (0.99, 0.99, 0.99), radius 2:
+        // the near face of the block (2, 2, 1) is about 1.43 m away, inside the sphere, yet the block's centre is 3 blocks from the
+        // centre of the block the player is in.
+        double px = 0.99, py = 0.99, pz = 0.99;
+        double nearest = Math.sqrt(sq(2 - px) + sq(2 - py) + sq(1 - pz));
+        assertTrue(nearest < 2, "the block touches the sphere: " + nearest);
+        CollisionBuilder b = CollisionBuilder.around(px, py, pz, 2);
+        Map3 world = new Map3().put(2, 2, 1, FULL);
+        for (int layer = 0; layer < b.layers(); layer++) b.scanLayer(world, layer);
+        assertEquals(12, b.triangles().size(), "the block inside the announced radius is part of the snapshot");
+    }
+
+    @Test
+    void aBlockWhoseCellIsBeyondTheRadiusOfTheExactCentreStaysOut() {
+        // Radius 3 around (0.99, 0.5, 0.5): block 3 starts 2.01 m away (in), block 4 starts 3.01 m away (out). Block 4 alone
+        // would add its own faces and take the shared ones away, so exactly 12 triangles means only block 3 was read.
+        CollisionBuilder b = CollisionBuilder.around(0.99, 0.5, 0.5, 3);
+        Map3 world = new Map3().put(4, 0, 0, FULL).put(3, 0, 0, FULL);
+        for (int layer = 0; layer < b.layers(); layer++) b.scanLayer(world, layer);
+        assertEquals(12, b.triangles().size());
+    }
+
+    private static double sq(double v) {
+        return v * v;
+    }
 }
