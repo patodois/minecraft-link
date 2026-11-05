@@ -85,7 +85,7 @@ final class CollisionScanner implements CollisionBuilder.Shapes {
             bx = (int) Math.floor(px);
             by = (int) Math.floor(py);
             bz = (int) Math.floor(pz);
-            building = new CollisionBuilder(bx, by, bz, s.settings.collisionRadius);
+            building = CollisionBuilder.around(px, py, pz, s.settings.collisionRadius);
             layer = 0;
             startedMs = now;
             lastX = px;
@@ -109,8 +109,8 @@ final class CollisionScanner implements CollisionBuilder.Shapes {
         level = null; // only needed while blocks are read; do not hold the world between scans
         mask = null;
         busy = true;
-        // The geometry is centred on the block the player stood in when the scan started (bx, by, bz), so that is the
-        // snapshot's centre too, not the position the player has walked to while the scan ran.
+        // The geometry was read around the exact position the player had when the scan started, so that is the snapshot's
+        // centre too (the contract: the triangles within radius of center), not where the player has walked to while the scan ran.
         double cx = lastX, cy = lastY, cz = lastZ;
         worker.execute(() -> {
             try {
