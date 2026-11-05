@@ -25,7 +25,15 @@ public final class CollisionBuilder {
 
     private static final byte EMPTY = 0, PARTIAL = 1, FULL = 2;
 
+    /**
+     * How far a collision box may reach above its own block (a fence, a wall or a gate is 1.5 tall, the tallest in the game),
+     * so the block under the sphere is read when the top of its box reaches into it.
+     */
+    private static final double MAX_OVERHANG = 0.5;
+
     private final int cx, cy, cz, radius, size;
+    /** One layer more than the cube: the one under it, whose boxes may reach up into the bottom of the sphere. */
+    private final int height;
     /** The exact point the snapshot is centred on (the one announced as its {@code center}); it lies inside block (cx, cy, cz). */
     private final double ex, ey, ez;
     private final byte[] kind;
@@ -45,13 +53,17 @@ public final class CollisionBuilder {
         this.ez = exactZ;
         this.radius = radius;
         this.size = 2 * radius + 1;
-        this.kind = new byte[size * size * size];
+        this.height = size + 1;
+        this.kind = new byte[size * size * height];
     }
 
     /**
      * A builder for the sphere of {@code radius} blocks around the exact point (x, y, z), which is also the {@code center}
      * the snapshot announces (CONTRACT.md 9.5: the triangles are those within {@code radius} of {@code center}). Every block
-     * whose cell touches that sphere is read, so no solid inside the announced radius is left out.
+     * whose cell touches that sphere is read, with the cell taken {@link #MAX_OVERHANG} taller than it is (and the layer under the
+     * cube, for the boxes that reach up from there), so a solid inside the announced radius is not left out. The limits: a box
+     * that reaches more than {@code MAX_OVERHANG} above its block is not looked for, and a block more than one layer under the
+     * cube is not read; the game has neither (its tallest collision box is 1.5 high).
      */
     public static CollisionBuilder around(double x, double y, double z, int radius) {
         int bx = (int) Math.floor(x), by = (int) Math.floor(y), bz = (int) Math.floor(z);
@@ -59,7 +71,7 @@ public final class CollisionBuilder {
     }
 
     public int layers() {
-        return size;
+        return height;
     }
 
     private int idx(int lx, int ly, int lz) {
@@ -68,14 +80,14 @@ public final class CollisionBuilder {
 
     /** Reads layer {@code layer} (0 = lowest y, {@code layers() - 1} = highest) from the world. */
     public void scanLayer(Shapes shapes, int layer) {
-        int y = cy - radius + layer;
+        int y = cy - radius - 1 + layer; // layer 0 is the one under the cube
         double r2 = (double) radius * radius;
         for (int lz = 0; lz < size; lz++) {
             for (int lx = 0; lx < size; lx++) {
                 int x = cx - radius + lx, z = cz - radius + lz;
                 // The distance from the exact centre to the block's cell (0 inside it): a block is read when any part of it
                 // is within the radius, whatever the fraction of the centre.
-                double dx = outside(ex, x), dy = outside(ey, y), dz = outside(ez, z);
+                double dx = outside(ex, x, x + 1), dy = outside(ey, y, y + 1 + MAX_OVERHANG), dz = outside(ez, z, z + 1);
                 if (dx * dx + dy * dy + dz * dz > r2) continue;
                 double[][] boxes = shapes.boxesAt(x, y, z);
                 if (boxes == null || boxes.length == 0) continue;
@@ -90,9 +102,9 @@ public final class CollisionBuilder {
         }
     }
 
-    /** Distance from {@code p} to the unit interval [cell, cell + 1] (0 when inside). */
-    private static double outside(double p, int cell) {
-        return p < cell ? cell - p : p > cell + 1 ? p - (cell + 1) : 0;
+    /** Distance from {@code p} to the interval [lo, hi] (0 when inside). */
+    private static double outside(double p, double lo, double hi) {
+        return p < lo ? lo - p : p > hi ? p - hi : 0;
     }
 
     private static boolean isUnitCube(double[][] boxes) {
@@ -102,7 +114,7 @@ public final class CollisionBuilder {
     }
 
     private boolean fullAt(int lx, int ly, int lz) {
-        if (lx < 0 || ly < 0 || lz < 0 || lx >= size || ly >= size || lz >= size) return false;
+        if (lx < 0 || ly < 0 || lz < 0 || lx >= size || ly >= height || lz >= size) return false;
         return kind[idx(lx, ly, lz)] == FULL;
     }
 
@@ -131,14 +143,14 @@ public final class CollisionBuilder {
     /** The triangles, each {@code float[9]} (a, b, c as x, y, z) in world coordinates, CCW seen from outside. */
     public List<float[]> triangles() {
         List<float[]> out = new ArrayList<>();
-        for (int ly = 0; ly < size; ly++) {
+        for (int ly = 0; ly < height; ly++) {
             for (int lz = 0; lz < size; lz++) {
                 for (int lx = 0; lx < size; lx++) {
                     int i = idx(lx, ly, lz);
                     byte k = kind[i];
                     if (k == EMPTY) continue;
                     double[][] boxes = k == FULL ? new double[][] {{0, 0, 0, 1, 1, 1}} : partial.get(i);
-                    int wx = cx - radius + lx, wy = cy - radius + ly, wz = cz - radius + lz;
+                    int wx = cx - radius + lx, wy = cy - radius - 1 + ly, wz = cz - radius + lz;
                     emitBlock(out, boxes, wx, wy, wz, lx, ly, lz);
                 }
             }
