@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import dev.patodois.rewritelink.Quat;
+import dev.patodois.rewritelink.Wire;
 import java.util.Random;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
@@ -112,5 +113,25 @@ class MappingTest {
         // facing +Z becomes facing -Z; facing east (+X) stays east
         assertVec(new double[] {0, 0, -1}, rotated(m.toLinkRotation(0, 0), 0, 0, 1), EPS);
         assertVec(new double[] {1, 0, 0}, rotated(m.toLinkRotation(-90, 0), 0, 0, 1), EPS);
+    }
+
+    @Test
+    void theAngularVelocityTurnsTheSameWayAsTheRotationUnderEveryFlip() {
+        for (boolean flipX : new boolean[] {false, true}) {
+            for (boolean flipZ : new boolean[] {false, true}) {
+                Mapping m = new Mapping(flipX, flipZ, 1.0, new double[3]);
+                // 9 degrees of yaw in one tick (50 ms): the rotation is the one at yaw 9, the angular velocity the rate of that tick
+                float[] rot = m.toLinkRotation(9, 0);
+                double wy = m.toLinkYawRate(9.0);
+                Wire.Pose p = new Wire.Pose(1, 0, 1_000_000, new float[3], rot, new float[] {1, 1, 1}, new float[3], new float[] {0, (float) wy, 0});
+                PoseTrack t = new PoseTrack();
+                t.add(p);
+                // 50 ms later a receiver extrapolating the pose must be at yaw 18
+                double[] got = rotated(t.at(1_050_000).rotation(), 0, 0, 1);
+                double[] d = Mapping.lookDirection(18, 0);
+                double[] want = m.toLinkDir(d[0], d[1], d[2]);
+                for (int i = 0; i < 3; i++) assertEquals(want[i], got[i], 1e-4, "flipX " + flipX + " flipZ " + flipZ + " component " + i);
+            }
+        }
     }
 }

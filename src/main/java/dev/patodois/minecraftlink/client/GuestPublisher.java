@@ -44,7 +44,7 @@ final class GuestPublisher {
         double[] vel = m.toLinkVelocityPerTick(dx, dy, dz);
         float[] rot = m.toLinkRotation(p.rotationYaw, p.rotationPitch);
         double yawRate = MathHelper.wrapDegrees(p.rotationYaw - p.prevRotationYaw);
-        double wy = Mapping.yawRateToAngularY(yawRate);
+        double wy = m.toLinkYawRate(yawRate);
         s.offerPose(new Wire.Pose(s.settings.guestEntity, teleport ? Wire.POSE_TELEPORT : 0, Wire.nowUs(),
                 new float[] {(float) pos[0], (float) pos[1], (float) pos[2]}, rot, new float[] {1, 1, 1},
                 new float[] {(float) vel[0], (float) vel[1], (float) vel[2]}, new float[] {0, (float) wy, 0}));
