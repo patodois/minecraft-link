@@ -366,7 +366,7 @@ git clone -b mc/1.20.1 https://github.com/patodois/minecraft-link
 cd minecraft-link
 export JAVA_HOME=/path/to/a/jdk-21                         # a JDK 21, not 25; see "Which JDK"
 ./gradlew build --no-daemon                                # all loaders: <loader>/build/libs/minecraft-link-<loader>-1.20.1-0.2.0.jar, and the tests
-./gradlew :common:test --no-daemon                         # the 71 unit tests (and 2 more that need the Rust reference peers) only
+./gradlew :common:test --no-daemon                         # the 84 unit tests (and 2 more that need the Rust reference peers) only
 ./gradlew :fabric:runClient --no-daemon                    # the real client with an offline dev account (-Xmx2G, Java 17); also :forge: and :neoforge:
 ```
 
