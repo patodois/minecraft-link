@@ -18,6 +18,13 @@ public final class PoseTrack {
     private int count;
     private float[] lastGoodScale = {1, 1, 1};
 
+    /** The rotation as a unit quaternion, or null when its length is 0. The length is worked out in double: a finite float squared can overflow a float. */
+    private static float[] unit(float[] q) {
+        double n = Math.sqrt((double) q[0] * q[0] + (double) q[1] * q[1] + (double) q[2] * q[2] + (double) q[3] * q[3]);
+        if (!(n > 0)) return null;
+        return new float[] {(float) (q[0] / n), (float) (q[1] / n), (float) (q[2] / n), (float) (q[3] / n)};
+    }
+
     private static boolean finite(float[] v) {
         for (float f : v) if (!Float.isFinite(f)) return false;
         return true;
@@ -30,6 +37,11 @@ public final class PoseTrack {
      */
     public synchronized void add(Wire.Pose p) {
         if (!finite(p.translation()) || !finite(p.rotation())) return;
+        // The rotation is the consumer's to normalise and one of length 0 is skipped (CONTRACT.md 3, 9.4): it is stored as a
+        // unit quaternion, so every way of resolving the pose starts from one.
+        float[] unit = unit(p.rotation());
+        if (unit == null) return;
+        p = new Wire.Pose(p.entity(), p.flags(), p.timeUs(), p.translation(), unit, p.scale(), p.velocity(), p.angularVelocity());
         boolean scaleOk = finite(p.scale());
         if (scaleOk) lastGoodScale = p.scale().clone();
         boolean velOk = finite(p.velocity()), angOk = finite(p.angularVelocity());
