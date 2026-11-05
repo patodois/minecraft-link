@@ -129,6 +129,16 @@ public final class Mapping {
         return -Math.toRadians(degreesPerTick) * TICKS_PER_SECOND;
     }
 
+    /**
+     * The same yaw rate as the angular velocity about +Y in link space, rad/s. Angular velocity is an axis, so it follows the
+     * rotation through the mapping: one mirrored axis (an odd number of flips) turns a clockwise yaw into a counter-clockwise
+     * rotation on the link and the sign changes with it; two flips are a half turn about Y and keep it.
+     */
+    public double toLinkYawRate(double degreesPerTick) {
+        double w = yawRateToAngularY(degreesPerTick);
+        return mirrors() ? -w : w;
+    }
+
     /** A rotation with columns (up x front, up, front), as a unit quaternion. */
     static float[] basisToQuat(double[] front, double[] up) {
         double[] f = norm(front);
