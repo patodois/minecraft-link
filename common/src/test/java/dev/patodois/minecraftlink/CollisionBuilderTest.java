@@ -165,13 +165,27 @@ class CollisionBuilderTest {
     }
 
     @Test
-    void aBlockWhoseCellIsBeyondTheRadiusOfTheExactCentreStaysOut() {
-        // Radius 3 around (0.99, 0.5, 0.5): block 3 starts 2.01 m away (in), block 4 starts 3.01 m away (out). Block 4 alone
-        // would add its own faces and take the shared ones away, so exactly 12 triangles means only block 3 was read.
-        CollisionBuilder b = CollisionBuilder.around(0.99, 0.5, 0.5, 3);
-        Map3 world = new Map3().put(4, 0, 0, FULL).put(3, 0, 0, FULL);
+    void aBlockInsideTheGridButBeyondTheSphereStaysOut() {
+        // Radius 3 around (0.5, 0.5, 0.5): block (3, 0, 0) touches the sphere (its face is 2.5 m away); block (3, 3, 3) is inside the
+        // grid of -3..3 but its nearest point is 4.3 m away. Two blocks that do not touch would each add 12 triangles.
+        CollisionBuilder b = CollisionBuilder.around(0.5, 0.5, 0.5, 3);
+        Map3 world = new Map3().put(3, 0, 0, FULL).put(3, 3, 3, FULL);
         for (int layer = 0; layer < b.layers(); layer++) b.scanLayer(world, layer);
-        assertEquals(12, b.triangles().size());
+        assertEquals(12, b.triangles().size(), "only the block that touches the sphere was read");
+    }
+
+    @Test
+    void aFenceUnderTheSphereIsReadWhenItsTopReachesIn() {
+        // Radius 2 around (0.5, 0.1, 0.5). The block (0, -3, 0) ends 2.1 m below the centre, beyond the radius, but a fence post
+        // in it is 1.5 high: its top is 1.6 m below the centre, inside the sphere.
+        double[][] fence = {{0.375, 0, 0.375, 0.625, 1.5, 0.625}};
+        CollisionBuilder b = CollisionBuilder.around(0.5, 0.1, 0.5, 2);
+        for (int layer = 0; layer < b.layers(); layer++) b.scanLayer(new Map3().put(0, -3, 0, fence), layer);
+        assertEquals(12, b.triangles().size(), "the post that reaches into the sphere is part of the snapshot");
+        // a post two blocks under the cube is beyond what is looked for (the tallest box in the game reaches 0.5 above its block)
+        CollisionBuilder far = CollisionBuilder.around(0.5, 0.1, 0.5, 2);
+        for (int layer = 0; layer < far.layers(); layer++) far.scanLayer(new Map3().put(0, -4, 0, fence), layer);
+        assertEquals(0, far.triangles().size());
     }
 
     private static double sq(double v) {
