@@ -82,8 +82,8 @@ class ReprojectTest {
     }
 
     @Test
-    void theNearerSurfaceWinsWhenTwoLandOnOnePixel() {
-        // two source pixels that land on the same destination pixel after a big move: the nearer one is kept
+    void pixelsThatStayApartKeepTheirOwnDepths() {
+        // two source pixels with the same camera: they stay on their own destination pixels and keep their depths
         byte[] px = new byte[W * H * 4];
         float[] d = new float[W * H];
         java.util.Arrays.fill(d, Float.POSITIVE_INFINITY);
@@ -100,6 +100,37 @@ class ReprojectTest {
         // same camera: both stay separate and keep their depths
         assertEquals(3f, od[16 * W + 16], 1e-3);
         assertEquals(6f, od[16 * W + 17], 1e-3);
+    }
+
+    /** A camera at the origin whose projection maps a point to x / depth, so that a 2 x 1 frame can be folded onto one pixel. */
+    private static final float[] FOLD_VIEW = CameraMath.identity();
+    private static final float[] FOLD_PROJ = foldProjection();
+
+    private static float[] foldProjection() {
+        float[] p = CameraMath.identity();
+        p[11] = -1;
+        p[15] = 0;
+        return p;
+    }
+
+    /** Folds a 2 x 1 frame (colour first, depth first) onto a single destination pixel and returns {colour, depth}. */
+    private static float[] fold(int firstColour, float firstDepth, int secondColour, float secondDepth) {
+        byte[] px = {(byte) firstColour, 0, 0, (byte) 255, (byte) secondColour, 0, 0, (byte) 255};
+        byte[] out = new byte[4];
+        float[] od = new float[1];
+        Reproject.run(px, new float[] {firstDepth, secondDepth}, 2, 1, FOLD_VIEW, FOLD_PROJ, FOLD_VIEW, FOLD_PROJ, 1, 1, out, od);
+        return new float[] {out[0], od[0]};
+    }
+
+    @Test
+    void theNearerSurfaceWinsWhenTwoLandOnOnePixel() {
+        // both source pixels land on the one destination pixel: the nearer is kept, whichever is drawn last
+        float[] nearFirst = fold(10, 3f, 99, 6f);
+        assertEquals(3f, nearFirst[1], 1e-5, "the nearer depth is kept when it is drawn first");
+        assertEquals(10f, nearFirst[0], "and so is its colour");
+        float[] nearLast = fold(99, 6f, 10, 3f);
+        assertEquals(3f, nearLast[1], 1e-5, "the nearer depth is kept when it is drawn last");
+        assertEquals(10f, nearLast[0], "and so is its colour");
     }
 
     @Test
