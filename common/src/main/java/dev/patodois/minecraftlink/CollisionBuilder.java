@@ -26,16 +26,36 @@ public final class CollisionBuilder {
     private static final byte EMPTY = 0, PARTIAL = 1, FULL = 2;
 
     private final int cx, cy, cz, radius, size;
+    /** The exact point the snapshot is centred on (the one announced as its {@code center}); it lies inside block (cx, cy, cz). */
+    private final double ex, ey, ez;
     private final byte[] kind;
     private final Map<Integer, double[][]> partial = new HashMap<>();
 
+    /** A builder centred on the middle of block (centerX, centerY, centerZ). */
     public CollisionBuilder(int centerX, int centerY, int centerZ, int radius) {
+        this(centerX, centerY, centerZ, radius, centerX + 0.5, centerY + 0.5, centerZ + 0.5);
+    }
+
+    private CollisionBuilder(int centerX, int centerY, int centerZ, int radius, double exactX, double exactY, double exactZ) {
         this.cx = centerX;
         this.cy = centerY;
         this.cz = centerZ;
+        this.ex = exactX;
+        this.ey = exactY;
+        this.ez = exactZ;
         this.radius = radius;
         this.size = 2 * radius + 1;
         this.kind = new byte[size * size * size];
+    }
+
+    /**
+     * A builder for the sphere of {@code radius} blocks around the exact point (x, y, z), which is also the {@code center}
+     * the snapshot announces (CONTRACT.md 9.5: the triangles are those within {@code radius} of {@code center}). Every block
+     * whose cell touches that sphere is read, so no solid inside the announced radius is left out.
+     */
+    public static CollisionBuilder around(double x, double y, double z, int radius) {
+        int bx = (int) Math.floor(x), by = (int) Math.floor(y), bz = (int) Math.floor(z);
+        return new CollisionBuilder(bx, by, bz, radius, x, y, z);
     }
 
     public int layers() {
@@ -49,11 +69,13 @@ public final class CollisionBuilder {
     /** Reads layer {@code layer} (0 = lowest y, {@code layers() - 1} = highest) from the world. */
     public void scanLayer(Shapes shapes, int layer) {
         int y = cy - radius + layer;
-        double r2 = (radius + 0.87) * (radius + 0.87);
+        double r2 = (double) radius * radius;
         for (int lz = 0; lz < size; lz++) {
             for (int lx = 0; lx < size; lx++) {
                 int x = cx - radius + lx, z = cz - radius + lz;
-                double dx = x + 0.5 - (cx + 0.5), dy = y + 0.5 - (cy + 0.5), dz = z + 0.5 - (cz + 0.5);
+                // The distance from the exact centre to the block's cell (0 inside it): a block is read when any part of it
+                // is within the radius, whatever the fraction of the centre.
+                double dx = outside(ex, x), dy = outside(ey, y), dz = outside(ez, z);
                 if (dx * dx + dy * dy + dz * dz > r2) continue;
                 double[][] boxes = shapes.boxesAt(x, y, z);
                 if (boxes == null || boxes.length == 0) continue;
@@ -66,6 +88,11 @@ public final class CollisionBuilder {
                 }
             }
         }
+    }
+
+    /** Distance from {@code p} to the unit interval [cell, cell + 1] (0 when inside). */
+    private static double outside(double p, int cell) {
+        return p < cell ? cell - p : p > cell + 1 ? p - (cell + 1) : 0;
     }
 
     private static boolean isUnitCube(double[][] boxes) {
