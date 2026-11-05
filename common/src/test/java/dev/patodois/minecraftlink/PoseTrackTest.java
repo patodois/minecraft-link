@@ -2,6 +2,7 @@ package dev.patodois.minecraftlink;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.patodois.rewritelink.Quat;
 import dev.patodois.rewritelink.Wire;
@@ -93,5 +94,34 @@ class PoseTrackTest {
     @Test
     void emptyTrackHasNoSample() {
         assertNull(new PoseTrack().at(1));
+    }
+
+    private static Wire.Pose extreme(long timeUs, float x, float scale, float angularY) {
+        return new Wire.Pose(1, 0, timeUs, new float[] {x, 0, 0}, new float[] {0, 0, 0, 1}, new float[] {scale, 1, 1}, new float[3],
+                new float[] {0, angularY, 0});
+    }
+
+    @Test
+    void aFiniteButHugeAngularVelocityStillGivesAFiniteRotation() {
+        PoseTrack t = new PoseTrack();
+        t.add(extreme(1_000_000, 0, 1, 1e20f));
+        float[] r = t.at(1_050_000).rotation();
+        for (float f : r) assertTrue(Float.isFinite(f), "rotation " + java.util.Arrays.toString(r));
+    }
+
+    @Test
+    void interpolatingBetweenTwoLargeOppositePositionsDoesNotOverflow() {
+        PoseTrack t = new PoseTrack();
+        t.add(extreme(1_000_000, -Float.MAX_VALUE, 1, 0));
+        t.add(extreme(1_100_000, Float.MAX_VALUE, 1, 0));
+        assertEquals(0.0, t.at(1_050_000).translation()[0], 1.0);
+    }
+
+    @Test
+    void interpolatingBetweenTwoLargeOppositeScalesDoesNotOverflow() {
+        PoseTrack t = new PoseTrack();
+        t.add(extreme(1_000_000, 0, -Float.MAX_VALUE, 0));
+        t.add(extreme(1_100_000, 0, Float.MAX_VALUE, 0));
+        assertEquals(0f, t.at(1_050_000).scale()[0], 1f);
     }
 }

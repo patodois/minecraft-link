@@ -93,11 +93,13 @@ public final class PoseTrack {
         float[] rot = p.rotation().clone();
         if (extrapolateSeconds > 0) {
             float[] w = p.angularVelocity();
-            double wl = Math.sqrt(w[0] * w[0] + w[1] * w[1] + w[2] * w[2]);
+            // In double from the first product: a finite float rate such as 1e20 rad/s overflows when squared as a float.
+            double wx = w[0], wy = w[1], wz = w[2];
+            double wl = Math.sqrt(wx * wx + wy * wy + wz * wz);
             if (wl > 1e-6) {
                 double angle = wl * extrapolateSeconds;
                 double s = Math.sin(angle / 2) / wl;
-                float[] dq = {(float) (w[0] * s), (float) (w[1] * s), (float) (w[2] * s), (float) Math.cos(angle / 2)};
+                float[] dq = {(float) (wx * s), (float) (wy * s), (float) (wz * s), (float) Math.cos(angle / 2)};
                 rot = mulQuat(dq, rot); // the angular velocity is in world space, so the delta goes on the left
             }
         }
@@ -106,9 +108,11 @@ public final class PoseTrack {
 
     private static Sample lerp(Wire.Pose a, Wire.Pose b, double t) {
         float[] ta = a.translation(), tb = b.translation();
-        double[] pos = {ta[0] + (tb[0] - ta[0]) * t, ta[1] + (tb[1] - ta[1]) * t, ta[2] + (tb[2] - ta[2]) * t};
+        // The differences are taken in double: two finite floats of opposite sign and large magnitude overflow when subtracted as floats.
+        double[] pos = {ta[0] + ((double) tb[0] - ta[0]) * t, ta[1] + ((double) tb[1] - ta[1]) * t, ta[2] + ((double) tb[2] - ta[2]) * t};
         float[] sa = a.scale(), sb = b.scale();
-        float[] sc = {(float) (sa[0] + (sb[0] - sa[0]) * t), (float) (sa[1] + (sb[1] - sa[1]) * t), (float) (sa[2] + (sb[2] - sa[2]) * t)};
+        float[] sc = {(float) (sa[0] + ((double) sb[0] - sa[0]) * t), (float) (sa[1] + ((double) sb[1] - sa[1]) * t),
+                (float) (sa[2] + ((double) sb[2] - sa[2]) * t)};
         return new Sample(pos, slerp(a.rotation(), b.rotation(), t), sc);
     }
 
