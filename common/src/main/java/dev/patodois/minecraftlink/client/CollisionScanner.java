@@ -1,6 +1,7 @@
 package dev.patodois.minecraftlink.client;
 
 import dev.patodois.minecraftlink.CollisionBuilder;
+import dev.patodois.minecraftlink.CollisionSendGate;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -39,8 +40,7 @@ final class CollisionScanner implements CollisionBuilder.Shapes {
     private long startedMs;
     private double lastX, lastY, lastZ;
     private boolean haveLast;
-    private long lastHash;
-    private long lastSentMs;
+    private final CollisionSendGate gate = new CollisionSendGate();
     private ClientLevel level;
     private final BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
     private final IdentityHashMap<VoxelShape, double[][]> cache = new IdentityHashMap<>();
@@ -49,8 +49,7 @@ final class CollisionScanner implements CollisionBuilder.Shapes {
     void reset() {
         building = null;
         haveLast = false;
-        lastHash = 0;
-        lastSentMs = 0;
+        gate.reset();
         startedMs = 0;
         cache.clear();
     }
@@ -103,12 +102,12 @@ final class CollisionScanner implements CollisionBuilder.Shapes {
                 List<float[]> link = CollisionBuilder.map(world, s.mapping);
                 long hash = CollisionBuilder.hash(link);
                 long t = System.currentTimeMillis();
-                if (hash != lastHash || t - lastSentMs >= REFRESH_MS) {
+                long session = s.sessionsSeen.get();
+                if (gate.due(hash, t, session, REFRESH_MS)) {
                     double[] c = s.mapping.toLinkPos(cx, cy, cz);
                     s.offerCollision(new Session.CollisionOut(new float[] {(float) c[0], (float) c[1], (float) c[2]},
                             (float) (s.settings.collisionRadius * s.mapping.scale), link));
-                    lastHash = hash;
-                    lastSentMs = t;
+                    gate.sent(hash, t, session);
                 }
             } catch (RuntimeException e) {
                 LinkManager.LOG.warn("collision snapshot failed", e);
