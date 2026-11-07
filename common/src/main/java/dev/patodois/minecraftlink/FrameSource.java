@@ -59,6 +59,22 @@ public final class FrameSource {
     private volatile Consumer<String> log;
     private final Object lock = new Object();
 
+    /** How an announcement is read from the pixel file; tests replace it to make a read fail. */
+    interface Read {
+        PixelFile.Frame read(PixelFile.Reader reader, Wire.FrameReady announced);
+    }
+
+    private volatile Read read = new Read() {
+        @Override
+        public PixelFile.Frame read(PixelFile.Reader r, Wire.FrameReady announced) {
+            return r.readLatest(announced, true);
+        }
+    };
+
+    void readWith(Read r) {
+        read = r;
+    }
+
     /** How many announcements wait for the worker at most; the oldest are dropped first. */
     static final int PENDING_CAP = 8;
 
@@ -77,7 +93,14 @@ public final class FrameSource {
     private PixelFile.Reader reader;
     private long readerGeneration = -1;
     private long failedGeneration = -1;
+    /** The generation that {@code current} and {@code lastCopied} belong to. */
+    private long workGeneration = -1;
     private PixelFile.Frame current;
+    /** The number of the last frame copied from the current channel's file: the order of presentation, which outlives the reader. */
+    private long lastCopied;
+    private boolean hasCopied;
+    /** How many times a pixel file was opened (for tests). */
+    private int readersOpened;
     /** A frame was copied and has not been published yet: publishing it is what makes the picture fresh. */
     private boolean freshOnPublish;
     private long currentVersion, composedFor = -1;
@@ -130,13 +153,26 @@ public final class FrameSource {
         }
     }
 
-    /** Puts {@code f} into {@code list} (newest frame number first, numbers compared as unsigned), once, and keeps at most {@code cap}. */
+    /**
+     * Puts {@code f} into {@code list}: newest frame number first (compared as unsigned), the earlier arrival first among equal
+     * numbers, once, and at most {@code cap}. Only an announcement that is equal in every field is the same one: two for one number
+     * that differ in slot or size are both kept, because the file decides which, if either, is real; a late announcement of the
+     * previous file must not hide the valid one of the current file.
+     */
     static void insert(List<Wire.FrameReady> list, Wire.FrameReady f, int cap) {
+        if (list.contains(f)) return; // already waiting
         int at = 0;
-        while (at < list.size() && Long.compareUnsigned(list.get(at).frame(), f.frame()) > 0) at++;
-        if (at < list.size() && list.get(at).frame() == f.frame()) return; // already waiting
+        while (at < list.size() && Long.compareUnsigned(list.get(at).frame(), f.frame()) >= 0) at++;
         list.add(at, f);
         while (list.size() > cap) list.remove(list.size() - 1);
+    }
+
+    /** Puts announcements that a failed step had taken but not tried back, if the channel is still the one they were announced for. */
+    private void requeue(List<Wire.FrameReady> ready, int from, long gen) {
+        synchronized (lock) {
+            if (generation != gen) return;
+            for (int i = from; i < ready.size(); i++) insert(pending, ready.get(i), PENDING_CAP);
+        }
     }
 
     // ------------------------------------------------------------------ render thread and others
@@ -175,7 +211,11 @@ public final class FrameSource {
 
     // ------------------------------------------------------------------ worker
 
-    /** One round of the worker: follow the channel, read the newest announcement, and compose it for {@code present}. */
+    /**
+     * One round of the worker: follow the channel, read the newest announcement that reads, and compose it for {@code present}.
+     * A step that fails keeps what it has: the frame already copied stays and is composed again on the next step, and the
+     * announcements it had not tried go back to the queue (unless the channel changed meanwhile).
+     */
     public void step(Wire.Camera present, Cameras cameras) {
         long gen;
         String want;
@@ -186,36 +226,69 @@ public final class FrameSource {
             ready = new ArrayList<Wire.FrameReady>(pending);
             pending.clear();
         }
-        if (gen != readerGeneration) {
-            closeReader();
-            readerGeneration = gen;
-            if (want != null && failedGeneration != gen) openReader(want, gen);
-        }
-        if (reader != null && reader.isGone()) {
-            closeReader();
-            failedGeneration = gen; // the same file is not opened again; the next channel is
-            dropComposed(gen);
-            note = "the pixel file is gone";
-            say("the pixel file is gone");
-        }
-        if (reader != null) {
-            // Newest first, until one reads: the ones after it are older and would be refused as stale.
-            for (Wire.FrameReady r : ready) {
-                PixelFile.Frame f = reader.readLatest(r, true);
-                if (f != null) {
-                    current = f;
-                    currentVersion++;
-                    freshOnPublish = true;
-                    break;
+        int tried = 0;
+        try {
+            if (gen != workGeneration) {
+                // A new channel or the loss of the session: what the worker holds belongs to the past, and the numbering starts over.
+                workGeneration = gen;
+                current = null;
+                hasCopied = false;
+                freshOnPublish = false;
+                composedFor = -1;
+            }
+            if (gen != readerGeneration) {
+                closeReader();
+                readerGeneration = gen;
+                if (want != null && failedGeneration != gen) openReader(want, gen);
+            }
+            if (reader != null && reader.isGone()) {
+                closeReader();
+                failedGeneration = gen; // the same file is not opened again; the next channel is
+                current = null;
+                freshOnPublish = false;
+                composedFor = -1;
+                dropComposed(gen);
+                note = "the pixel file is gone";
+                say("the pixel file is gone");
+            }
+            if (reader != null) {
+                // Newest first, until one reads: the ones after it are older and would be refused as stale.
+                for (; tried < ready.size(); tried++) {
+                    Wire.FrameReady r = ready.get(tried);
+                    if (hasCopied && Long.compareUnsigned(r.frame(), lastCopied) <= 0) continue; // not newer than what was copied
+                    PixelFile.Frame f = read.read(reader, r);
+                    if (f != null) {
+                        current = f;
+                        currentVersion++;
+                        freshOnPublish = true;
+                        lastCopied = f.frame(); // only a valid copy sets the order
+                        hasCopied = true;
+                        tried = ready.size(); // the rest are older
+                        break;
+                    }
                 }
             }
+        } catch (RuntimeException e) {
+            requeue(ready, tried, gen);
+            throw e;
+        } catch (Error e) {
+            requeue(ready, tried, gen);
+            throw e;
         }
         if (current != null && present != null) {
             int camKey = System.identityHashCode(present);
             if (currentVersion != composedFor || camKey != composedCamera) {
                 composedFor = currentVersion;
                 composedCamera = camKey;
-                compose(gen, present, cameras);
+                try {
+                    compose(gen, present, cameras);
+                } catch (RuntimeException e) {
+                    composedFor = -1; // composed again on the next step
+                    throw e;
+                } catch (Error e) {
+                    composedFor = -1;
+                    throw e;
+                }
             }
         }
     }
@@ -225,10 +298,18 @@ public final class FrameSource {
         closeReader();
     }
 
-    /** After a failure of a step: forget the worker's state, so that the next step starts from the current channel. */
+    /**
+     * After a failure of a step: open the pixel file again, in case the failure left the reader in doubt. Nothing else is
+     * forgotten: the frame copied, the order of presentation and the announcements not tried yet are kept.
+     */
     public void recover() {
         closeReader();
         readerGeneration = -1;
+    }
+
+    /** How many times a pixel file was opened (for tests). */
+    int readersOpened() {
+        return readersOpened;
     }
 
     /** Whether the worker has a pixel file open (for tests). */
@@ -239,6 +320,7 @@ public final class FrameSource {
     private void openReader(String want, long gen) {
         try {
             reader = PixelFile.Reader.open(Paths.get(want));
+            readersOpened++;
             if ((long) reader.width * reader.height > maxPixels) {
                 String why = reader.width + "x" + reader.height + " is more than the " + maxPixels + " pixels this mod takes";
                 closeReader();
@@ -261,9 +343,6 @@ public final class FrameSource {
     private void closeReader() {
         if (reader != null) reader.close();
         reader = null;
-        current = null;
-        freshOnPublish = false;
-        composedFor = -1;
     }
 
     private void dropComposed(long gen) {
