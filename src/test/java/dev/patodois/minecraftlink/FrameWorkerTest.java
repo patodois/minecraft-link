@@ -217,4 +217,62 @@ class FrameWorkerTest {
         assertTrue(failures.size() >= 2 && failures.size() <= 4, "composed again after each pause, not in a loop: " + failures.size());
         assertNull(s.composed());
     }
+
+    @Test
+    void thePausesGrowToACeilingAndStartOverAfterAStepThatWentWell() throws Exception {
+        assertEquals(250, FrameWorker.nextPause(0));
+        assertEquals(500, FrameWorker.nextPause(250));
+        assertEquals(4000, FrameWorker.nextPause(2000));
+        assertEquals(5000, FrameWorker.nextPause(4000));
+        assertEquals(5000, FrameWorker.nextPause(5000), "a ceiling");
+        // the worker: fail, fail, go well, fail: 250, 500, then the normal pause, then 250 again (the failures start over)
+        List<Long> pauses = new CopyOnWriteArrayList<>();
+        AtomicInteger steps = new AtomicInteger();
+        FrameWorker[] self = new FrameWorker[1];
+        FrameWorker w = new FrameWorker(new FrameSource(), () -> {
+            int n = steps.getAndIncrement();
+            if (n == 0 || n == 1 || n == 3) throw new IllegalStateException("fails at " + n);
+            return PRESENT;
+        }, NO_CAMERAS, e -> { }, ms -> {
+            pauses.add(ms);
+            return pauses.size() < 4; // end after the fourth pause
+        });
+        w.start();
+        w.join(5000);
+        assertEquals(java.util.Arrays.asList(250L, 500L, FrameWorker.STEP_PAUSE_MS, 250L), pauses);
+    }
+
+    @Test
+    void aReportThatThrowsDoesNotEndTheWorker() throws Exception {
+        List<Long> pauses = new CopyOnWriteArrayList<>();
+        AtomicInteger reports = new AtomicInteger();
+        AtomicInteger steps = new AtomicInteger();
+        FrameWorker w = new FrameWorker(new FrameSource(), () -> {
+            steps.incrementAndGet();
+            throw new IllegalStateException("always");
+        }, NO_CAMERAS, e -> {
+            reports.incrementAndGet();
+            throw new IllegalStateException("the report itself fails");
+        }, ms -> {
+            pauses.add(ms);
+            return pauses.size() < 3;
+        });
+        w.start();
+        w.join(5000);
+        assertEquals(3, steps.get(), "the worker went on after a report that threw");
+        assertEquals(3, reports.get());
+    }
+
+    @Test
+    void aStepThatWentWellIsFollowedByTheShortPauseNotAHotLoop() throws Exception {
+        List<Long> pauses = new CopyOnWriteArrayList<>();
+        FrameWorker w = new FrameWorker(new FrameSource(), () -> PRESENT, NO_CAMERAS, e -> { }, ms -> {
+            pauses.add(ms);
+            return pauses.size() < 3;
+        });
+        w.start();
+        w.join(5000);
+        assertEquals(java.util.Arrays.asList(FrameWorker.STEP_PAUSE_MS, FrameWorker.STEP_PAUSE_MS, FrameWorker.STEP_PAUSE_MS), pauses);
+        assertTrue(FrameWorker.STEP_PAUSE_MS >= 1 && FrameWorker.STEP_PAUSE_MS <= 5, "a short pause: a frame waits at most a few milliseconds for the worker");
+    }
 }

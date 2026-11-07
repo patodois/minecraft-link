@@ -222,7 +222,7 @@ class FrameSourceTest {
             s.step(PRESENT, NO_CAMERAS);
             assertEquals(44, mark(s), "frame 1 of the new file is shown although 9 was announced after it");
             // a guest that sends one frame only still shows it
-            assertTrue(s.lastValidMs() > 0);
+            assertTrue(s.fresh());
         } finally {
             s.release();
             w2.close();
@@ -237,7 +237,7 @@ class FrameSourceTest {
         s.announce(write(writer, 11));
         s.step(PRESENT, NO_CAMERAS);
         assertEquals(11, mark(s));
-        assertTrue(s.lastValidMs() > 0);
+        assertTrue(s.fresh());
         long generation = s.generation();
         // the new file has a frame 2 in slot 2, and an announcement of the old file's frame 2 is waiting when the new channel comes
         Path other = dir.resolve("b.frames");
@@ -248,7 +248,7 @@ class FrameSourceTest {
             s.announce(write(writer, 22));
             s.channel(other.toString());
             assertNull(s.composed(), "the image of the previous channel is gone at once");
-            assertEquals(0, s.lastValidMs(), "and so is its freshness");
+            assertFalse(s.fresh(), "and so is its freshness");
             assertEquals(generation + 1, s.generation());
             s.step(PRESENT, NO_CAMERAS);
             assertNull(s.composed(), "the old announcement is not read from the new file, where its number is a frame too");
@@ -272,7 +272,7 @@ class FrameSourceTest {
         assertEquals(11, mark(s));
         s.lost();
         assertNull(s.composed());
-        assertEquals(0, s.lastValidMs());
+        assertFalse(s.fresh());
         s.announce(write(writer, 22));
         s.step(PRESENT, NO_CAMERAS);
         assertNull(s.composed(), "nothing is read without a channel");
@@ -301,7 +301,7 @@ class FrameSourceTest {
         go.countDown();
         worker.join(10_000);
         assertNull(s.composed(), "the image of the old channel did not appear in the new one");
-        assertEquals(0, s.lastValidMs(), "and it did not make the new channel look fresh");
+        assertFalse(s.fresh(), "and it did not make the new channel look fresh");
         s.release();
     }
 
@@ -311,7 +311,7 @@ class FrameSourceTest {
         s.channel(file.toString());
         s.announce(write(writer, 11));
         s.step(PRESENT, NO_CAMERAS);
-        long first = s.lastValidMs();
+        long first = s.validAt();
         assertTrue(first > 0);
         Thread.sleep(30);
         // the host moves (a new camera object) while the guest sends nothing: the picture is recomposed but is not fresher
@@ -319,7 +319,7 @@ class FrameSourceTest {
         long version = s.composed().version;
         s.step(moved, NO_CAMERAS);
         assertTrue(s.composed().version > version, "recomposed for the new camera");
-        assertEquals(first, s.lastValidMs());
+        assertEquals(first, s.validAt());
         s.release();
     }
 
@@ -336,7 +336,7 @@ class FrameSourceTest {
         }
         s.step(PRESENT, NO_CAMERAS);
         assertNull(s.composed(), "the file shrank: its picture is not kept");
-        assertEquals(0, s.lastValidMs());
+        assertFalse(s.fresh());
         assertTrue(s.note().contains("gone"), s.note());
         // the file is whole again, and the worker starts over (as it does after a failure): the channel is the same, so it stays shut
         try (RandomAccessFile f = new RandomAccessFile(file.toFile(), "rw")) {
@@ -370,5 +370,242 @@ class FrameSourceTest {
         assertTrue(s.hasReader());
         s.release();
         assertFalse(s.hasReader());
+    }
+
+    /** A guest camera and a present camera that differ, and a pixel file with a depth plane, for the reprojection. */
+    private static final Wire.Camera GUEST_CAM = Wire.Camera.lookAt(new float[] {0, 1, 5}, new float[] {0, 1, 0}, 1f, 0.1f, 100f, 32, 24);
+    private static final Wire.Camera MOVED_CAM = Wire.Camera.lookAt(new float[] {1, 1, 5}, new float[] {0, 1, 0}, 1f, 0.1f, 100f, 32, 24);
+
+    private PixelFile.Writer depthWriter(Path p) throws Exception {
+        return new PixelFile.Writer(p, 2, 1, 4, true);
+    }
+
+    private static Wire.FrameReady writeDepth(PixelFile.Writer w, int mark, float depth) {
+        long n = w.write(new byte[] {(byte) mark, 0, 0, (byte) 255, (byte) mark, 0, 0, (byte) 255}, new float[] {depth, depth}, 2, 1, 7, 1000L + mark);
+        return new Wire.FrameReady(n, (int) (n % w.slots), 7, 2, 1);
+    }
+
+    private static final FrameSource.Cameras GUEST_RING = seq -> seq == 7 ? new CameraRing.Entry(7, GUEST_CAM.view(), GUEST_CAM.proj(), 0.1f, 100f) : null;
+
+    @Test
+    void aFrameWithDepthIsReprojectedToTheCameraBeingPresented() throws Exception {
+        Path f2 = dir.resolve("d.frames");
+        PixelFile.Writer w = depthWriter(f2);
+        try {
+            FrameSource s = new FrameSource();
+            s.channel(f2.toString());
+            s.announce(writeDepth(w, 55, 5f));
+            s.step(GUEST_CAM, GUEST_RING); // rendered with this very camera: the picture is where it was, with its depth
+            FrameSource.Composed same = s.composed();
+            assertNotNull(same);
+            assertTrue(same.reprojected, "the guest's camera is in the ring and the file has depth");
+            assertEquals(2 * 1, same.depth.length);
+            assertEquals(55, same.rgba[0]);
+            // the host moved: the same frame is composed again, for the new camera
+            s.step(MOVED_CAM, GUEST_RING);
+            FrameSource.Composed moved = s.composed();
+            assertTrue(moved.version > same.version);
+            assertTrue(moved.reprojected);
+            assertFalse(java.util.Arrays.equals(same.rgba, moved.rgba) && java.util.Arrays.equals(same.depth, moved.depth),
+                    "a 1 m move of the camera changes where the pixels land");
+            s.release();
+        } finally {
+            w.close();
+            Files.deleteIfExists(f2);
+        }
+    }
+
+    @Test
+    void anOutOfMemoryBetweenTheTwoWorkingArraysDoesNotBreakTheReprojectionForGood() throws Exception {
+        Path f2 = dir.resolve("d.frames");
+        PixelFile.Writer w = depthWriter(f2);
+        try {
+            FrameSource s = new FrameSource();
+            s.channel(f2.toString());
+            int[] calls = {0};
+            s.allocateDepthWith(n -> {
+                if (calls[0]++ == 0) throw new OutOfMemoryError("test");
+                return new float[n];
+            });
+            s.announce(writeDepth(w, 55, 5f));
+            try {
+                s.step(GUEST_CAM, GUEST_RING);
+                org.junit.jupiter.api.Assertions.fail("the OutOfMemoryError should have been thrown");
+            } catch (OutOfMemoryError expected) {
+                // reported by the worker, which goes on
+            }
+            s.step(GUEST_CAM, GUEST_RING); // memory is back
+            assertNotNull(s.composed(), "the frame is reprojected on the next step");
+            assertTrue(s.composed().reprojected);
+            s.announce(writeDepth(w, 66, 5f));
+            s.step(GUEST_CAM, GUEST_RING);
+            assertEquals(66, mark(s), "and so is the next one");
+            s.release();
+        } finally {
+            w.close();
+            Files.deleteIfExists(f2);
+        }
+    }
+
+    @Test
+    void aGuestThatIsConnectedAndSilentIsNotReprojectedAtEveryCameraMove() throws Exception {
+        Path f2 = dir.resolve("d.frames");
+        PixelFile.Writer w = depthWriter(f2);
+        try {
+            FrameSource s = new FrameSource();
+            long[] now = {1_000_000_000L};
+            s.clockWith(() -> now[0]);
+            s.channel(f2.toString());
+            s.announce(writeDepth(w, 55, 5f));
+            s.step(GUEST_CAM, GUEST_RING);
+            long version = s.composed().version;
+            assertTrue(s.fresh());
+            // inside the second the picture follows the camera
+            now[0] += 900_000_000L;
+            s.step(MOVED_CAM, GUEST_RING);
+            assertTrue(s.composed().version > version, "recomposed while it is on screen");
+            // a second after the last frame the guest is gone and the camera moves on: nothing is composed
+            now[0] += 2_000_000_000L;
+            assertFalse(s.fresh());
+            long expired = s.composed().version;
+            for (int i = 0; i < 5; i++) {
+                s.step(Wire.Camera.lookAt(new float[] {i, 1, 5}, new float[] {0, 1, 0}, 1f, 0.1f, 100f, 32, 24), GUEST_RING);
+            }
+            assertEquals(expired, s.composed().version, "no image is made for a picture nobody draws");
+            // the guest sends again: the picture is correct for the camera of that moment, and fresh
+            s.announce(writeDepth(w, 66, 5f));
+            s.step(MOVED_CAM, GUEST_RING);
+            assertEquals(66, mark(s));
+            assertTrue(s.composed().version > expired);
+            assertTrue(s.fresh());
+            s.release();
+        } finally {
+            w.close();
+            Files.deleteIfExists(f2);
+        }
+    }
+
+    @Test
+    void theDefaultClockOfTheFreshnessIsTheMonotonicOne() throws Exception {
+        FrameSource s = new FrameSource();
+        s.channel(file.toString());
+        s.announce(write(writer, 11));
+        long before = System.nanoTime();
+        s.step(PRESENT, NO_CAMERAS);
+        long after = System.nanoTime();
+        assertTrue(s.validAt() - before >= 0 && after - s.validAt() >= 0, "read from System.nanoTime, not from the wall clock");
+        s.release();
+    }
+
+    @Test
+    void theFreshnessFollowsAMonotonicClockNotTheWallClock() throws Exception {
+        FrameSource s = new FrameSource();
+        long[] now = {5_000_000_000L};
+        s.clockWith(() -> now[0]);
+        s.channel(file.toString());
+        s.announce(write(writer, 11));
+        s.step(PRESENT, NO_CAMERAS);
+        assertTrue(s.fresh());
+        now[0] += 999_000_000L;
+        assertTrue(s.fresh(), "just inside the second");
+        now[0] += 2_000_000L;
+        assertFalse(s.fresh(), "just past it");
+        s.release();
+    }
+
+    @Test
+    void aPassingFailureToOpenThePixelFileIsThrownAndTriedAgainNotTheEndOfTheChannel() throws Exception {
+        for (boolean io : new boolean[] {true, false}) {
+            FrameSource s = new FrameSource();
+            int[] calls = {0};
+            s.openWith(p -> {
+                if (calls[0]++ == 0) {
+                    if (io) throw new java.io.IOException("too many open files");
+                    throw new IllegalStateException("passing");
+                }
+                return PixelFile.Reader.open(p);
+            });
+            s.channel(file.toString());
+            s.announce(write(writer, 77));
+            try {
+                s.step(PRESENT, NO_CAMERAS);
+                org.junit.jupiter.api.Assertions.fail("a failure that may pass is thrown to the worker");
+            } catch (java.io.UncheckedIOException | IllegalStateException expected) {
+                assertTrue(s.note().contains("trying again"), s.note());
+            }
+            s.recover();
+            s.step(PRESENT, NO_CAMERAS); // the announcement went back to the queue and the file opens now
+            assertEquals(77, mark(s), "the frames of the same file are not lost to a passing error (io " + io + ")");
+            s.release();
+            writer.close();
+            writer = new PixelFile.Writer(file, 2, 1, 4, false); // a fresh file for the next round: the writer deletes its own on close
+        }
+    }
+
+    @Test
+    void aMissingFileOrAFileTheContractRefusesEndsTheChannelWithANote() throws Exception {
+        FrameSource s = new FrameSource();
+        s.channel(dir.resolve("nothing.frames").toString());
+        s.announce(ready(1));
+        s.step(PRESENT, NO_CAMERAS); // no exception: the file the peer announced is not there, as the contract says to skip
+        assertTrue(s.note().contains("no such file"), s.note());
+        assertNull(s.composed());
+        Path junk = dir.resolve("junk.frames");
+        Files.write(junk, new byte[100]);
+        s.channel(junk.toString());
+        s.step(PRESENT, NO_CAMERAS);
+        assertTrue(s.note().contains("cannot use the pixel file"), s.note());
+        s.channel("relative/path.frames");
+        s.step(PRESENT, NO_CAMERAS);
+        assertTrue(s.note().contains("not absolute"), s.note());
+        s.channel(dir.toString() + "/with\0nul.frames");
+        s.step(PRESENT, NO_CAMERAS);
+        assertTrue(s.note().contains("cannot use the pixel file"), "a path that can never open ends the channel: " + s.note());
+        s.release();
+        Files.deleteIfExists(junk);
+    }
+
+    @Test
+    void aFailureThrownAsAnErrorIsComposedAgainOnTheNextStep() throws Exception {
+        FrameSource s = new FrameSource();
+        s.channel(file.toString());
+        s.announce(write(writer, 11));
+        int[] calls = {0};
+        FrameSource.Cameras failOnce = seq -> {
+            if (calls[0]++ == 0) throw new OutOfMemoryError("test");
+            return null;
+        };
+        try {
+            s.step(PRESENT, failOnce);
+            org.junit.jupiter.api.Assertions.fail("thrown");
+        } catch (OutOfMemoryError expected) {
+            // the worker reports it
+        }
+        s.step(PRESENT, failOnce);
+        assertEquals(11, mark(s), "the frame copied before the Error is composed again, with the same camera");
+        s.release();
+    }
+
+    @Test
+    void announcementsAFailedStepTookBackAreRequeuedOnARuntimeExceptionToo() throws Exception {
+        FrameSource s = new FrameSource();
+        s.channel(file.toString());
+        Wire.FrameReady a = write(writer, 11), b = write(writer, 22);
+        s.announce(a);
+        s.announce(b);
+        int[] calls = {0};
+        s.readWith((reader, announced) -> {
+            if (calls[0]++ == 0) throw new IllegalStateException("test");
+            return reader.readLatest(announced, true);
+        });
+        try {
+            s.step(PRESENT, NO_CAMERAS);
+            org.junit.jupiter.api.Assertions.fail("thrown");
+        } catch (IllegalStateException expected) {
+            // the worker reports it
+        }
+        s.step(PRESENT, NO_CAMERAS);
+        assertEquals(22, mark(s), "the newest announcement is read first again, the failing one included");
+        s.release();
     }
 }

@@ -283,7 +283,7 @@ git clone -b mc/1.12.2 https://github.com/patodois/minecraft-link
 cd minecraft-link
 export JAVA_HOME=/opt/homebrew/opt/openjdk@25                    # or any JDK 25
 ./gradlew build --no-daemon          # build/libs/minecraft-link-forge-1.12.2-0.3.0.jar (reobfuscated, link-java merged in), runs the tests
-./gradlew test --no-daemon           # 110 unit tests (and 2 more that need the Rust reference peers), no game needed
+./gradlew test --no-daemon           # 122 unit tests (and 2 more that need the Rust reference peers), no game needed
 ./gradlew runClient --no-daemon      # the real client, deobfuscated dev environment, offline dev account, -Xmx1500m
 ./gradlew runObfClient --no-daemon   # the real client with the reobfuscated release jar, as a player's game runs it
 ```

@@ -20,15 +20,33 @@ import java.util.function.Supplier;
  */
 public final class FrameWorker {
     static final long FIRST_PAUSE_MS = 250, LONGEST_PAUSE_MS = 5000;
+    /** The pause between two steps that went well. */
+    static final long STEP_PAUSE_MS = 2;
+
+    /** Waits; tests replace it to see the pauses without waiting. False: the worker should end. */
+    interface Sleeper {
+        boolean sleep(long ms);
+    }
+
+    /** The pause after the failure that follows {@code pause} (0 after a step that went well): 250 ms, doubling, at most 5 s. */
+    static long nextPause(long pause) {
+        return pause == 0 ? FIRST_PAUSE_MS : Math.min(pause * 2, LONGEST_PAUSE_MS);
+    }
 
     private final FrameSource source;
     private final Supplier<Wire.Camera> present;
     private final FrameSource.Cameras cameras;
     private final Consumer<Throwable> onFailure;
+    private final Sleeper sleeper;
     private volatile boolean stop;
     private final Thread thread;
 
     public FrameWorker(FrameSource source, Supplier<Wire.Camera> present, FrameSource.Cameras cameras, Consumer<Throwable> onFailure) {
+        this(source, present, cameras, onFailure, null);
+    }
+
+    FrameWorker(FrameSource source, Supplier<Wire.Camera> present, FrameSource.Cameras cameras, Consumer<Throwable> onFailure, Sleeper sleeper) {
+        this.sleeper = sleeper;
         this.source = source;
         this.present = present;
         this.cameras = cameras;
@@ -79,11 +97,11 @@ public final class FrameWorker {
                     } catch (Throwable ignored) {
                         // nothing more to do: the next step tries again
                     }
-                    pause = pause == 0 ? FIRST_PAUSE_MS : Math.min(pause * 2, LONGEST_PAUSE_MS);
+                    pause = nextPause(pause);
                     if (!sleep(pause)) break;
                     continue;
                 }
-                if (!sleep(2)) break;
+                if (!sleep(STEP_PAUSE_MS)) break;
             }
         } finally {
             source.release();
@@ -92,6 +110,7 @@ public final class FrameWorker {
 
     /** Sleeps {@code ms} in short slices, so that a stop is seen at once; false when the worker should end (stopped or interrupted from outside). */
     private boolean sleep(long ms) {
+        if (sleeper != null) return sleeper.sleep(ms);
         long end = System.nanoTime() + ms * 1_000_000L;
         try {
             do {
