@@ -95,7 +95,7 @@ final class Session {
     volatile int lastCameraSeq;
     /** Whether the guest's own frames are on screen: a frame of the current channel was read lately and {@code show_frames} lets the host draw them. */
     boolean framesFresh() {
-        return settings.showFrames && System.currentTimeMillis() - frames.lastValidMs() < 1000;
+        return settings.showFrames && frames.fresh();
     }
 
     final AtomicLong camerasSent = new AtomicLong();

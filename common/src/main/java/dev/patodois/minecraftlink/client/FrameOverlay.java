@@ -226,7 +226,7 @@ final class FrameOverlay {
             GlStateManager._glBindVertexArray(vao);
             GL11.glDrawArrays(GL11.GL_TRIANGLES, 0, 3);
             framesShown++;
-        } catch (RuntimeException e) {
+        } catch (RuntimeException | Error e) {
             broken = true;
             note = "frame pass failed: " + e;
             LinkManager.LOG.error("the frame pass failed, frames are off for this run", e);
