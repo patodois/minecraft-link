@@ -10,7 +10,7 @@ game or rewrite that speaks it: the Rust tools, the Hytale plugin, anything else
 **Adding this to a game.** Read the [guide to adding a game](https://github.com/patodois/rewrite-bridge/blob/main/docs/INTEGRATING.md) first. This mod is its worked example of a Java host and guest: it bundles link-java and, per this README, is built and tested on Fabric (and Quilt), NeoForge and Forge.
 
 **Status.** Version **0.3.0** is the work in progress, not released: contract revision 7 and link-java 0.3.0 (the guest's frames are presented with the ordered read, `PixelFile.Reader.readLatest`, and everything of a pixel channel is dropped when the channel changes or the session ends, see "Guest frames"). The latest release is version **0.2.0** (link-java 0.2.0, contract revision 6), released as [mc-26.3-v0.2.0](https://github.com/patodois/minecraft-link/releases/tag/mc-26.3-v0.2.0): the optional link token, **off by default**, see "Link token" below. The
-previous release is [mc-26.3-v0.1.2](https://github.com/patodois/minecraft-link/releases/tag/mc-26.3-v0.1.2) (link-java 0.1.3, revision 5, live interop matrix 50/50 pairs on 2026-10-26). What 0.1.2 changed: guest frames are read with link-java's size-aware call, so a
+the release before it is [mc-26.3-v0.1.2](https://github.com/patodois/minecraft-link/releases/tag/mc-26.3-v0.1.2) (link-java 0.1.3, revision 5, live interop matrix 50/50 pairs on 2026-10-26). What 0.1.2 changed: guest frames are read with link-java's size-aware call, so a
 frame whose `Frame` datagram disagrees with its slot header is skipped (contract 9.6); and a collision snapshot over the revision 5 limit of 925,696
 triangles is cut to the nearest ones and reported, never dropped silently (see "Host: how it works").
 
@@ -27,7 +27,7 @@ This page (`main`) is the Minecraft 26.3 mod.
 | 1.20.1 | [`mc/1.20.1`](https://github.com/patodois/minecraft-link/tree/mc/1.20.1) | Fabric, Forge, NeoForge (the 47.1.x fork) | built and tested on all three | [releases `mc-1.20.1-v*`](https://github.com/patodois/minecraft-link/releases?q=mc-1.20.1-v) |
 | 1.12.2 | [`mc/1.12.2`](https://github.com/patodois/minecraft-link/tree/mc/1.12.2) | Forge | built and tested | [releases `mc-1.12.2-v*`](https://github.com/patodois/minecraft-link/releases?q=mc-1.12.2-v) |
 | 1.7.10 | [`mc/1.7.10`](https://github.com/patodois/minecraft-link/tree/mc/1.7.10) | Forge | built and tested | [releases `mc-1.7.10-v*`](https://github.com/patodois/minecraft-link/releases?q=mc-1.7.10-v) |
-| 1.2.5 | coming (its own repository, not published yet) | Forge 1.2.5 (`BaseMod`) | coming | none yet |
+| 1.2.5 | in progress (its own repository, no release) | Forge 1.2.5 (`BaseMod`) | not built or tested in this repository | none |
 
 **Download.** The jars of each version are attached to a release on the [Releases page](https://github.com/patodois/minecraft-link/releases). A release is named after its
 tag, `mc-<Minecraft version>-v<mod version>` (for example `mc-26.3-v0.1.0`), and holds the jars to install for that
@@ -38,7 +38,7 @@ code. To build them yourself instead, see "Build and test" below.
 that the list itself came from here. With the downloads in one folder (needs OpenSSL 3):
 
 ```sh
-sh tools/verify-release.sh minecraft-link mc-26.3-v0.2.0 path/to/folder
+sh tools/verify-release.sh minecraft-link mc-26.3-v0.2.0 path/to/folder   # mc-26.3-v0.2.0 is the latest release; use the tag of the one you downloaded
 ```
 
 The signed text is `osp release patodois/minecraft-link <tag>`, a newline, then `SHA256SUMS`, so a signature from another release
@@ -387,7 +387,7 @@ git clone https://github.com/patodois/minecraft-link
 cd minecraft-link
 export JAVA_HOME=/opt/homebrew/opt/openjdk@25         # or any JDK 25; see "Which JDK"
 ./gradlew build --no-daemon                           # all loaders: <loader>/build/libs/minecraft-link-<loader>-26.3-0.3.0.jar, and the tests
-./gradlew :common:test --no-daemon                    # the unit tests only (88, plus 2 that need the Rust reference peers)
+./gradlew :common:test --no-daemon                    # the unit tests only (100, plus 2 that need the Rust reference peers)
 ./gradlew :fabric:runClient --no-daemon               # the real client with an offline dev account (-Xmx2G); also :neoforge: and :forge:
 ```
 
