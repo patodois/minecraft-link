@@ -90,8 +90,8 @@ class FrameSessionTest {
 
             // another pixel file: the first one's image and freshness are gone, and its frames are not shown again
             w2 = new PixelFile.Writer(f2, 2, 1, 4, false);
-            guest.announceFrames(w2);
             long generation = s.frames.generation();
+            guest.announceFrames(w2);
             until("the new channel", s, guest, () -> s.frames.generation() != generation);
             assertNull(s.frames.composed(), "the previous channel's image is dropped");
             assertFalse(s.framesFresh(), "and so is its freshness");
@@ -143,9 +143,9 @@ class FrameSessionTest {
             }
             assertTrue(s.isConnected() && guest.isConnected());
             w1 = new PixelFile.Writer(f1, 2, 1, 4, false);
+            long generation = s.frames.generation();
             guest.announceFrames(w1);
             w2 = new PixelFile.Writer(f2, 2, 1, 4, false);
-            long generation = s.frames.generation();
             // the guest moves on to the second file; the host has seen it when frame 9 of the first one arrives, late
             guest.announceFrames(w2);
             end = System.currentTimeMillis() + 10_000;
