@@ -312,7 +312,7 @@ a test-only reference for matrices; it is not in the jar.
 
 ### Which JDK
 
-One rule for every branch of this repository: **run Gradle with a JDK 25.** RetroFuturaGradle 2.0.6 is compiled for Java 25 and fails on a JDK 21 with
+On this branch, **run Gradle with a JDK 25.** RetroFuturaGradle 2.0.6 is compiled for Java 25 and fails on a JDK 21 with
 `UnsupportedClassVersionError ... class file version 69.0` (checked on the 1.12.2 branch with Temurin 21.0.12; the build files are the same), and the same JDK 25
 runs the builds of the other branches. The game and the mod are Java 8, but you do not install that: the Gradle toolchain download provides it.
 
