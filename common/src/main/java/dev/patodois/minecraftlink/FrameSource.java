@@ -4,6 +4,8 @@ import dev.patodois.rewritelink.PixelFile;
 import dev.patodois.rewritelink.Wire;
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Consumer;
 
 /**
@@ -15,8 +17,10 @@ import java.util.function.Consumer;
  * result ({@link #composed}).
  *
  * <p>The rules (link-java 0.3.0, CONTRACT.md 9.6): {@code Frame} announcements are not validated by the link, so the worker reads
- * with {@link PixelFile.Reader#readLatest}, which refuses a duplicate or an older number, and only the newest announcement is kept
- * while the worker is busy (an old one that arrives late must not replace a newer one). Everything belongs to a <em>generation</em>,
+ * with {@link PixelFile.Reader#readLatest}, which refuses a duplicate or an older number. A few announcements are kept while the
+ * worker is busy, newest first, and the worker tries them in that order until one reads: an old one that arrives late is never
+ * preferred to a newer one, and a number that the current file cannot give (a late frame of the previous file, higher than the
+ * first frames of the new one) cannot hide a valid frame of the current file. Everything belongs to a <em>generation</em>,
  * which a new {@code frame_channel} or the loss of the session starts: the announcement, the reader and the finished image of an
  * earlier generation are dropped, and a worker that was in the middle of a reprojection when the generation changed cannot publish
  * its result (the check is made under the same lock that clears the image). The image is also dropped when the reader reports that
@@ -55,13 +59,15 @@ public final class FrameSource {
     private volatile Consumer<String> log;
     private final Object lock = new Object();
 
+    /** How many announcements wait for the worker at most; the oldest are dropped first. */
+    static final int PENDING_CAP = 8;
+
     // ---- guarded by lock
     private long generation;
     private String path;
-    private Wire.FrameReady pending;
+    private final List<Wire.FrameReady> pending = new ArrayList<Wire.FrameReady>();
     private Composed composed;
     private long version;
-    private boolean closed;
 
     private volatile long lastValidMs;
     private volatile String note = "";
@@ -72,6 +78,8 @@ public final class FrameSource {
     private long readerGeneration = -1;
     private long failedGeneration = -1;
     private PixelFile.Frame current;
+    /** A frame was copied and has not been published yet: publishing it is what makes the picture fresh. */
+    private boolean freshOnPublish;
     private long currentVersion, composedFor = -1;
     private int composedCamera;
     private byte[] outRgba;
@@ -104,10 +112,10 @@ public final class FrameSource {
         synchronized (lock) {
             generation++;
             path = newPath;
-            pending = null;
+            pending.clear();
             composed = null;
+            lastValidMs = 0;
         }
-        lastValidMs = 0;
     }
 
     /** The session ended: the file and its frames belong to a peer that is gone. */
@@ -115,11 +123,20 @@ public final class FrameSource {
         channel(null);
     }
 
-    /** A {@code Frame} datagram. Only the newest announcement of the generation is kept: an older one arriving late is dropped. */
+    /** A {@code Frame} datagram: kept among the few newest announcements of the generation, newest first. */
     public void announce(Wire.FrameReady f) {
         synchronized (lock) {
-            if (pending == null || Long.compareUnsigned(f.frame(), pending.frame()) > 0) pending = f;
+            insert(pending, f, PENDING_CAP);
         }
+    }
+
+    /** Puts {@code f} into {@code list} (newest frame number first, numbers compared as unsigned), once, and keeps at most {@code cap}. */
+    static void insert(List<Wire.FrameReady> list, Wire.FrameReady f, int cap) {
+        int at = 0;
+        while (at < list.size() && Long.compareUnsigned(list.get(at).frame(), f.frame()) > 0) at++;
+        if (at < list.size() && list.get(at).frame() == f.frame()) return; // already waiting
+        list.add(at, f);
+        while (list.size() > cap) list.remove(list.size() - 1);
     }
 
     // ------------------------------------------------------------------ render thread and others
@@ -156,28 +173,18 @@ public final class FrameSource {
         return reprojected;
     }
 
-    /** Stops publishing for good (the session is closed). */
-    public void close() {
-        synchronized (lock) {
-            closed = true;
-            pending = null;
-            composed = null;
-        }
-        lastValidMs = 0;
-    }
-
     // ------------------------------------------------------------------ worker
 
     /** One round of the worker: follow the channel, read the newest announcement, and compose it for {@code present}. */
     public void step(Wire.Camera present, Cameras cameras) {
         long gen;
         String want;
-        Wire.FrameReady ready;
+        List<Wire.FrameReady> ready;
         synchronized (lock) {
             gen = generation;
             want = path;
-            ready = pending;
-            pending = null;
+            ready = new ArrayList<Wire.FrameReady>(pending);
+            pending.clear();
         }
         if (gen != readerGeneration) {
             closeReader();
@@ -191,14 +198,15 @@ public final class FrameSource {
             note = "the pixel file is gone";
             say("the pixel file is gone");
         }
-        if (ready != null && reader != null) {
-            PixelFile.Frame f = reader.readLatest(ready, true);
-            if (f != null) {
-                current = f;
-                currentVersion++;
-                lastValidMs = System.currentTimeMillis();
-                synchronized (lock) {
-                    if (generation != gen) lastValidMs = 0; // the channel changed while this was read
+        if (reader != null) {
+            // Newest first, until one reads: the ones after it are older and would be refused as stale.
+            for (Wire.FrameReady r : ready) {
+                PixelFile.Frame f = reader.readLatest(r, true);
+                if (f != null) {
+                    current = f;
+                    currentVersion++;
+                    freshOnPublish = true;
+                    break;
                 }
             }
         }
@@ -215,6 +223,17 @@ public final class FrameSource {
     /** Closes the worker's reader (the worker's last call). */
     public void release() {
         closeReader();
+    }
+
+    /** After a failure of a step: forget the worker's state, so that the next step starts from the current channel. */
+    public void recover() {
+        closeReader();
+        readerGeneration = -1;
+    }
+
+    /** Whether the worker has a pixel file open (for tests). */
+    boolean hasReader() {
+        return reader != null;
     }
 
     private void openReader(String want, long gen) {
@@ -243,14 +262,17 @@ public final class FrameSource {
         if (reader != null) reader.close();
         reader = null;
         current = null;
+        freshOnPublish = false;
         composedFor = -1;
     }
 
     private void dropComposed(long gen) {
         synchronized (lock) {
-            if (generation == gen) composed = null;
+            if (generation == gen) {
+                composed = null;
+                lastValidMs = 0;
+            }
         }
-        lastValidMs = 0;
     }
 
     private void compose(long gen, Wire.Camera present, Cameras cameras) {
@@ -271,10 +293,16 @@ public final class FrameSource {
             c = new Composed(0, cur.width(), cur.height(), cur.rgba(), cur.depth(), false, cur.timeUs());
         }
         synchronized (lock) {
-            // The reprojection can take long; if the channel changed meanwhile, or the source was closed, this image belongs to the past.
-            if (generation != gen || closed) return;
+            // The reprojection can take long; if the channel changed meanwhile, this image belongs to the past. The check and the
+            // publication are one step under the lock that a channel change clears the image with.
+            if (generation != gen) return;
             composed = new Composed(++version, c.width, c.height, c.rgba, c.depth, c.reprojected, c.guestTimeUs);
             if (reproject) reprojected++;
+            // Fresh only for a frame that was copied since the last publication: a new camera alone is not the guest sending.
+            if (freshOnPublish) {
+                freshOnPublish = false;
+                lastValidMs = System.currentTimeMillis();
+            }
         }
     }
 }

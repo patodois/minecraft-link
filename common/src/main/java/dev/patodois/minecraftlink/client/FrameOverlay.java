@@ -30,7 +30,8 @@ import org.lwjgl.opengl.GL30;
  *
  * <p>Three stages, on three threads:
  * <ol>
- *   <li><b>link thread</b>: the {@code Frame} datagram arrives ({@code Session.latestFrame});</li>
+ *   <li><b>link thread</b>: the {@code Frame} datagram, the {@code frame_channel} and the end of the session arrive, and {@link Session} hands them to its
+ *       {@code frames} ({@link dev.patodois.minecraftlink.FrameSource});</li>
  *   <li><b>frame worker</b> (own thread): maps the announced pixel file read-only
  *       ({@link PixelFile.Reader}, seqlock), copies the slot (colour and, if the file has it, the
  *       linear depth plane), looks up the camera the guest rendered with in the ring of sent cameras
