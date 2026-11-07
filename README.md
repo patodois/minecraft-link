@@ -8,7 +8,7 @@ repository, revision 7), so a running Minecraft can be a **host** or a **guest**
 game or rewrite that speaks it: the Rust tools, the Hytale plugin, anything else.
 
 **Status.** Version **0.3.0** is the work in progress, not released: contract revision 7 and link-java 0.3.0 (the guest's frames are presented with the ordered read, `PixelFile.Reader.readLatest`, and everything of a pixel channel is dropped when the channel changes or the session ends, see "Guest frames"). The latest release is version **0.2.0** (link-java 0.2.0, contract revision 6), released as [mc-1.20.1-v0.2.0](https://github.com/patodois/minecraft-link/releases/tag/mc-1.20.1-v0.2.0): the optional link token, **off by default**, see "Link token" below. The
-previous release is [mc-1.20.1-v0.1.2](https://github.com/patodois/minecraft-link/releases/tag/mc-1.20.1-v0.1.2) (link-java 0.1.3, revision 5, live interop matrix 50/50 pairs on 2026-10-26). What 0.1.2 changed: guest frames are read with link-java's size-aware call, so a
+the release before it is [mc-1.20.1-v0.1.2](https://github.com/patodois/minecraft-link/releases/tag/mc-1.20.1-v0.1.2) (link-java 0.1.3, revision 5, live interop matrix 50/50 pairs on 2026-10-26). What 0.1.2 changed: guest frames are read with link-java's size-aware call, so a
 frame whose `Frame` datagram disagrees with its slot header is skipped (contract 9.6); and a collision snapshot over the revision 5 limit of 925,696
 triangles is cut to the nearest ones and reported, never dropped silently (see "Host: how it works").
 
@@ -367,7 +367,7 @@ git clone -b mc/1.20.1 https://github.com/patodois/minecraft-link
 cd minecraft-link
 export JAVA_HOME=/path/to/a/jdk-21                         # a JDK 21, not 25; see "Which JDK"
 ./gradlew build --no-daemon                                # all loaders: <loader>/build/libs/minecraft-link-<loader>-1.20.1-0.3.0.jar, and the tests
-./gradlew :common:test --no-daemon                         # the 91 unit tests (and 2 more that need the Rust reference peers) only
+./gradlew :common:test --no-daemon                         # the 103 unit tests (and 2 more that need the Rust reference peers) only
 ./gradlew :fabric:runClient --no-daemon                    # the real client with an offline dev account (-Xmx2G, Java 17); also :forge: and :neoforge:
 ```
 
