@@ -115,4 +115,57 @@ class FrameSessionTest {
             Files.deleteIfExists(dir);
         }
     }
+
+    @Test
+    void aLateFrameOfThePreviousFileDoesNotHideTheFirstFrameOfTheNewOne() throws Exception {
+        LinkSettings settings = new LinkSettings();
+        settings.port = 0;
+        Session s = Session.open(Role.HOST, settings, "tester");
+        Path dir = Files.createTempDirectory("framesession");
+        Path f1 = dir.resolve("a.frames"), f2 = dir.resolve("b.frames");
+        Link guest = null;
+        PixelFile.Writer w1 = null, w2 = null;
+        try {
+            LinkConfig cfg = new LinkConfig("Test Guest");
+            cfg.controlPort = s.controlPort;
+            guest = Link.guest(cfg);
+            long end = System.currentTimeMillis() + 5000;
+            while (System.currentTimeMillis() < end && !(s.isConnected() && guest.isConnected())) {
+                guest.poll();
+                Thread.sleep(3);
+            }
+            assertTrue(s.isConnected() && guest.isConnected());
+            w1 = new PixelFile.Writer(f1, 2, 1, 4, false);
+            guest.announceFrames(w1);
+            w2 = new PixelFile.Writer(f2, 2, 1, 4, false);
+            long generation = s.frames.generation();
+            // the guest moves on to the second file; the host has seen it when frame 9 of the first one arrives, late
+            guest.announceFrames(w2);
+            end = System.currentTimeMillis() + 10_000;
+            while (System.currentTimeMillis() < end && s.frames.generation() < generation + 2) {
+                guest.poll();
+                Thread.sleep(2);
+            }
+            assertEquals(generation + 2, s.frames.generation(), "both channels were seen");
+            long before = s.framesReceived.get();
+            guest.sendFrame(new Wire.FrameReady(9, 1, 0, 2, 1));
+            send(guest, w2, 22); // the guest's only frame of the new file: number 1, in slot 1
+            end = System.currentTimeMillis() + 10_000;
+            while (System.currentTimeMillis() < end && s.framesReceived.get() < before + 2) {
+                guest.poll();
+                Thread.sleep(2);
+            }
+            assertEquals(before + 2, s.framesReceived.get(), "both announcements reached the session before the worker looked");
+            s.frames.step(PRESENT, seq -> null);
+            assertEquals(22, mark(s), "a guest that sends one frame shows it, although a higher number was announced first");
+        } finally {
+            if (guest != null) guest.close();
+            s.closeBlocking();
+            if (w1 != null) w1.close();
+            if (w2 != null) w2.close();
+            Files.deleteIfExists(f1);
+            Files.deleteIfExists(f2);
+            Files.deleteIfExists(dir);
+        }
+    }
 }
