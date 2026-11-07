@@ -2,4 +2,4 @@
 gradle/wrapper/gradle-wrapper.jar blob=eddabd2 # Gradle's own wrapper bootstrap (only org/gradle classes), pinned to this exact file
 content:gradlew blob=249efbb # Gradle's generated wrapper script: header names "the original authors" (Apache-2.0)
 content:gradlew.bat blob=8508ef6 # Gradle's generated wrapper script: header names "the original author or authors" (Apache-2.0)
-content:dev/narrator-shim/** # our own no-op stand-in for Mojang's text2speech Narrator (3 methods), dev runs only, not in the jar
+content:dev/narrator-shim/** blob=913f7d01e7 # our own no-op stand-in for Mojang's text2speech Narrator (3 methods), dev runs only, not in the jar
