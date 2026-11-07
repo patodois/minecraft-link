@@ -4,11 +4,11 @@
 
 A client-side [Forge](https://files.minecraftforge.net) mod for Minecraft: Java Edition **1.7.10** (the version
 GregTech: New Horizons and the big tech modpacks of that era run on) that speaks the **rewrite-bridge passthrough link
-protocol v1** (`docs/CONTRACT.md` in the [`rewrite-bridge`](https://github.com/patodois/rewrite-bridge) repository, revision 6), so a running Minecraft can be a
+protocol v1** (`docs/CONTRACT.md` in the [`rewrite-bridge`](https://github.com/patodois/rewrite-bridge) repository, revision 7), so a running Minecraft can be a
 **host** or a **guest** next to any other game or rewrite that speaks it: the Rust tools, the Hytale plugin, anything
 else.
 
-**Status.** Version **0.2.0** (link-java 0.2.0, contract revision 6), released as [mc-1.7.10-v0.2.0](https://github.com/patodois/minecraft-link/releases/tag/mc-1.7.10-v0.2.0): the optional link token, **off by default**, see "Link token" below. The
+**Status.** Version **0.3.0** is the work in progress, not released: contract revision 7 and link-java 0.3.0 (the guest's frames are presented with the ordered read, `PixelFile.Reader.readLatest`, and everything of a pixel channel is dropped when the channel changes or the session ends, see "Guest frames"). The latest release is version **0.2.0** (link-java 0.2.0, contract revision 6), released as [mc-1.7.10-v0.2.0](https://github.com/patodois/minecraft-link/releases/tag/mc-1.7.10-v0.2.0): the optional link token, **off by default**, see "Link token" below. The
 previous release is [mc-1.7.10-v0.1.2](https://github.com/patodois/minecraft-link/releases/tag/mc-1.7.10-v0.1.2) (link-java 0.1.3, revision 5, live interop matrix 50/50 pairs on 2026-10-26). What 0.1.2 changed: guest frames are read with link-java's size-aware call, so a
 frame whose `Frame` datagram disagrees with its slot header is skipped (contract 9.6); and a collision snapshot over the revision 5 limit of 925,696
 triangles is cut to the nearest ones and reported, never dropped silently (see "Host: how it works").
@@ -72,7 +72,7 @@ see the table in the [main README](https://github.com/patodois/minecraft-link#mi
 ## Install
 
 Download `minecraft-link-forge-1.7.10-0.1.0.jar` from the [release `mc-1.7.10-v0.1.0`](https://github.com/patodois/minecraft-link/releases/tag/mc-1.7.10-v0.1.0) on the Releases page
-(all releases of this version: [`mc-1.7.10-v*`](https://github.com/patodois/minecraft-link/releases?q=mc-1.7.10-v)), or build the jar (below): `build/libs/minecraft-link-forge-1.7.10-0.2.0.jar`. Use exactly that one, the file without a suffix: not the `-dev` jar, which is
+(all releases of this version: [`mc-1.7.10-v*`](https://github.com/patodois/minecraft-link/releases?q=mc-1.7.10-v)), or build the jar (below): `build/libs/minecraft-link-forge-1.7.10-0.3.0.jar`. Use exactly that one, the file without a suffix: not the `-dev` jar, which is
 the deobfuscated one for development runs and does not load in a real game (the one exception is the lwjgl3ify test below, which wants it).
 
 1. In Prism Launcher make (or use) an instance for **Minecraft 1.7.10 with Forge** (10.13.4.1614, Prism's Edit
@@ -240,8 +240,9 @@ is sent to a server or saved) and is hidden while a guest's frames are on screen
 
 1. `frame_channel` names the pixel file; the frame worker maps it read-only (`PixelFile.Reader` in link-java: all
    header and depth checks of the contract, the seqlock).
-2. On each `Frame` it copies the slot (colour and linear depth in metres) with the size-aware call `reader.read(frame, true)` (link-java 0.1.3: a frame is skipped, before any pixel is copied, when its datagram's width or height is 0 or above the file's, or differs from the slot header's; frame 0 is always skipped), looks `camera_seq` up in a ring of the last
+2. On each `Frame` it copies the slot (colour and linear depth in metres) with the ordered call `reader.readLatest(frame, true)` (link-java 0.3.0: a frame is skipped, before any pixel is copied, when its datagram's width or height is 0 or above the file's, or differs from the slot header's, when its number is 0, and when it is not newer than the last one shown from this file; only the newest announcement is kept while the worker is busy, so a late older `Frame` datagram is not what gets read), looks `camera_seq` up in a ring of the last
    256 cameras sent (a second at 240 fps; the contract asks for half a second) and reprojects the frame to the camera being presented now (`Reproject`, on a helper thread).
+   A new `frame_channel`, the end of the session, or a pixel file that has shrunk drops the reader, the pending announcement and the finished image at once (a worker still reprojecting cannot publish it afterwards), and the picture of the old channel is not drawn: the placeholder is back until a frame of the new channel has been read.
 3. At `RenderWorldLastEvent` the render thread uploads the result to an RGBA8 texture and a 32-bit float texture
    (`GL_LUMINANCE32F_ARB`), copies the game's **depth buffer** into a `GL_DEPTH_COMPONENT24` texture with
    `glCopyTexSubImage2D` (from the bound framebuffer, which is `Minecraft.getFramebuffer()` in an unmodified game), and
@@ -282,12 +283,12 @@ You need git and a **JDK 25** to run Gradle (see "Which JDK"); the game and the 
 Forge 10.13.4.1614, MCP stable_12.
 
 ```sh
-git clone https://github.com/patodois/link-java                  # the protocol library, a sibling directory of minecraft-link
+git clone --branch v0.3.0 https://github.com/patodois/link-java                  # the protocol library, a sibling directory of minecraft-link
 git clone -b mc/1.7.10 https://github.com/patodois/minecraft-link
 cd minecraft-link
 export JAVA_HOME=/opt/homebrew/opt/openjdk@25                    # or any JDK 25
-./gradlew build --no-daemon          # build/libs/minecraft-link-forge-1.7.10-0.2.0.jar (reobfuscated, link-java merged in), runs the tests
-./gradlew test --no-daemon           # 84 unit tests (and 2 more that need the Rust reference peers), no game needed
+./gradlew build --no-daemon          # build/libs/minecraft-link-forge-1.7.10-0.3.0.jar (reobfuscated, link-java merged in), runs the tests
+./gradlew test --no-daemon           # 91 unit tests (and 2 more that need the Rust reference peers), no game needed
 ./gradlew runClient --no-daemon      # the real client, deobfuscated dev environment, offline dev account, -Xmx1500m
 ./gradlew runObfClient --no-daemon   # the real client with the reobfuscated release jar, as a player's game runs it
 ```
@@ -340,7 +341,7 @@ provides.
 
 To test, copy [ExampleMod1.7.10](https://github.com/GTNewHorizons/ExampleMod1.7.10) somewhere, put the `-dev.jar`
 that `./gradlew build` leaves in `build/libs` into its `libs/`, add
-`runtimeOnlyNonPublishable(files("libs/minecraft-link-forge-1.7.10-0.2.0-dev.jar"))` to its `dependencies.gradle`, and run its
+`runtimeOnlyNonPublishable(files("libs/minecraft-link-forge-1.7.10-0.3.0-dev.jar"))` to its `dependencies.gradle`, and run its
 `./gradlew runClient25` (or `runClient21`, `runClient17`; GTNHGradle's tasks for lwjgl3ify, Hodgepodge and UniMixins).
 The result of that test is below. In this repository's own builds nothing of this is configured.
 
