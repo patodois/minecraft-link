@@ -183,7 +183,7 @@ class FrameWorkerTest {
     }
 
     @Test
-    void theFrameThatFailedIsNotComposedAgainAfterTheWorkerStartsOver() throws Exception {
+    void theFrameCopiedBeforeAFailureIsComposedAgainAfterThePause() throws Exception {
         FrameSource s = new FrameSource();
         s.channel(file.toString());
         AtomicInteger calls = new AtomicInteger();
@@ -192,14 +192,29 @@ class FrameWorkerTest {
             return null;
         };
         List<Throwable> failures = new CopyOnWriteArrayList<>();
-        // a new camera object every time: a frame that is still held would be composed again at once
-        FrameWorker w = new FrameWorker(s, () -> Wire.Camera.lookAt(new float[] {0, 1, 0}, new float[] {0, 1, -1}, 1f, 0.1f, 100f, 64, 48),
-                failing, failures::add).start();
-        s.announce(write(writer, 11));
+        FrameWorker w = new FrameWorker(s, () -> PRESENT, failing, failures::add).start();
+        s.announce(write(writer, 11)); // the guest sends no other frame
         until("the failure to be reported", () -> !failures.isEmpty());
-        Thread.sleep(500); // longer than the pause after a failure
+        until("the frame, composed again", () -> mark(s) == 11);
         w.stop();
         w.join(5000);
-        assertNull(s.composed(), "the frame that failed was dropped, not retried");
+        assertEquals(1, failures.size());
+        assertEquals(2, s.readersOpened(), "the pixel file was opened again after the failure");
+    }
+
+    @Test
+    void aFailureOfTheSameFrameThatKeepsComingStaysOnThePauses() throws Exception {
+        FrameSource s = new FrameSource();
+        s.channel(file.toString());
+        List<Throwable> failures = new CopyOnWriteArrayList<>();
+        FrameWorker w = new FrameWorker(s, () -> PRESENT, seq -> {
+            throw new IllegalStateException("always");
+        }, failures::add).start();
+        s.announce(write(writer, 11));
+        Thread.sleep(700);
+        w.stop();
+        w.join(5000);
+        assertTrue(failures.size() >= 2 && failures.size() <= 4, "composed again after each pause, not in a loop: " + failures.size());
+        assertNull(s.composed());
     }
 }

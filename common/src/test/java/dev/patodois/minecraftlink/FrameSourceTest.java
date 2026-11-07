@@ -71,6 +71,122 @@ class FrameSourceTest {
     }
 
     @Test
+    void onlyAnnouncementsEqualInEveryFieldAreTheSameOne() {
+        List<Wire.FrameReady> l = new ArrayList<>();
+        Wire.FrameReady a = new Wire.FrameReady(1, 1, 0, 1, 1), b = new Wire.FrameReady(1, 1, 0, 2, 1), c = new Wire.FrameReady(1, 2, 0, 2, 1);
+        for (Wire.FrameReady f : new Wire.FrameReady[] {a, b, a, c, b}) FrameSource.insert(l, f, 8);
+        // one number, three different announcements: all three are kept, in the order they arrived
+        assertEquals(java.util.Arrays.asList(a, b, c), l);
+    }
+
+    @Test
+    void anAnnouncementOfThePreviousFileWithTheSameNumberCannotHideTheOnlyFrameOfTheNewOne() throws Exception {
+        FrameSource s = new FrameSource();
+        s.channel(file.toString());
+        Wire.FrameReady valid = write(writer, 44);
+        // a late frame 1 of a previous 1 x 1 file, then frame 1 of this 2 x 1 file
+        s.announce(new Wire.FrameReady(valid.frame(), valid.slot(), 0, 1, 1));
+        s.announce(valid);
+        s.step(PRESENT, NO_CAMERAS);
+        assertEquals(44, mark(s), "the valid frame was not discarded before any valid copy");
+        s.release();
+    }
+
+    @Test
+    void recoveringCannotForgetTheOrderAlreadyPresented() throws Exception {
+        FrameSource s = new FrameSource();
+        s.channel(file.toString());
+        Wire.FrameReady one = write(writer, 11), two = write(writer, 22), three = write(writer, 33);
+        s.announce(three);
+        s.step(PRESENT, NO_CAMERAS);
+        assertEquals(33, mark(s));
+        long version = s.composed().version;
+        // what the worker does after a failure: the pixel file is opened again, and a late older frame arrives
+        s.recover();
+        s.announce(two);
+        s.announce(one);
+        s.step(PRESENT, NO_CAMERAS);
+        assertEquals(33, mark(s), "a late older frame is not presented after the reader was reopened");
+        assertEquals(version, s.composed().version);
+        assertEquals(2, s.readersOpened());
+        s.release();
+    }
+
+    @Test
+    void aFailureWhileComposingKeepsTheCopiedFrameForTheNextStep() throws Exception {
+        FrameSource s = new FrameSource();
+        s.channel(file.toString());
+        s.announce(write(writer, 11)); // a guest that sent one frame and will send no other
+        int[] calls = {0};
+        FrameSource.Cameras failOnce = seq -> {
+            if (calls[0]++ == 0) throw new IllegalStateException("test");
+            return null;
+        };
+        try {
+            s.step(PRESENT, failOnce);
+            org.junit.jupiter.api.Assertions.fail("the failure should have been thrown");
+        } catch (IllegalStateException expected) {
+            // the worker reports it, opens the file again and goes on
+        }
+        s.recover();
+        s.step(PRESENT, failOnce);
+        assertEquals(11, mark(s), "the only frame of a static guest is composed again, not lost");
+        s.release();
+    }
+
+    @Test
+    void announcementsAFailedStepHadNotTriedGoBackToTheQueue() throws Exception {
+        FrameSource s = new FrameSource();
+        s.channel(file.toString());
+        s.announce(write(writer, 11));
+        int[] calls = {0};
+        s.readWith((reader, announced) -> {
+            if (calls[0]++ == 0) throw new OutOfMemoryError("test");
+            return reader.readLatest(announced, true);
+        });
+        try {
+            s.step(PRESENT, NO_CAMERAS);
+            org.junit.jupiter.api.Assertions.fail("the failure should have been thrown");
+        } catch (OutOfMemoryError expected) {
+            // reported by the worker
+        }
+        s.recover();
+        s.step(PRESENT, NO_CAMERAS);
+        assertEquals(11, mark(s), "the announcement the failed step took is read on the next one");
+        s.release();
+    }
+
+    @Test
+    void announcementsAFailedStepGivesBackAreNotKeptForAChannelThatIsNoMore() throws Exception {
+        FrameSource s = new FrameSource();
+        Path other = dir.resolve("b.frames");
+        PixelFile.Writer w2 = new PixelFile.Writer(other, 2, 1, 4, false);
+        try {
+            write(w2, 77); // frame 1 of the new file, never announced
+            s.channel(file.toString());
+            s.announce(write(writer, 11));
+            s.readWith((reader, announced) -> {
+                s.channel(other.toString()); // the channel changes while the read is under way
+                throw new IllegalStateException("test");
+            });
+            try {
+                s.step(PRESENT, NO_CAMERAS);
+                org.junit.jupiter.api.Assertions.fail("the failure should have been thrown");
+            } catch (IllegalStateException expected) {
+                // reported by the worker
+            }
+            s.recover();
+            s.readWith((reader, announced) -> reader.readLatest(announced, true));
+            s.step(PRESENT, NO_CAMERAS);
+            assertNull(s.composed(), "frame 1 of the old file is not read as frame 1 of the new one");
+        } finally {
+            s.release();
+            w2.close();
+            Files.deleteIfExists(other);
+        }
+    }
+
+    @Test
     void anOlderAnnouncementArrivingAfterANewerOneIsNotWhatGetsRead() {
         FrameSource s = new FrameSource();
         Wire.FrameReady f1 = write(writer, 11), f2 = write(writer, 22), f3 = write(writer, 33);
