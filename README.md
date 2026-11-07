@@ -8,7 +8,7 @@ RLCraft and most big modpacks of that era run on) that speaks the **rewrite-brid
 **guest** next to any other game or rewrite that speaks it: the Rust tools, the Hytale plugin, anything else.
 
 **Status.** Version **0.3.0** is the work in progress, not released: contract revision 7 and link-java 0.3.0 (the guest's frames are presented with the ordered read, `PixelFile.Reader.readLatest`, and everything of a pixel channel is dropped when the channel changes or the session ends, see "Guest frames"). The latest release is version **0.2.0** (link-java 0.2.0, contract revision 6), released as [mc-1.12.2-v0.2.0](https://github.com/patodois/minecraft-link/releases/tag/mc-1.12.2-v0.2.0): the optional link token, **off by default**, see "Link token" below. The
-previous release is [mc-1.12.2-v0.1.2](https://github.com/patodois/minecraft-link/releases/tag/mc-1.12.2-v0.1.2) (link-java 0.1.3, revision 5, live interop matrix 50/50 pairs on 2026-10-26). What 0.1.2 changed: guest frames are read with link-java's size-aware call, so a
+the release before it is [mc-1.12.2-v0.1.2](https://github.com/patodois/minecraft-link/releases/tag/mc-1.12.2-v0.1.2) (link-java 0.1.3, revision 5, live interop matrix 50/50 pairs on 2026-10-26). What 0.1.2 changed: guest frames are read with link-java's size-aware call, so a
 frame whose `Frame` datagram disagrees with its slot header is skipped (contract 9.6); and a collision snapshot over the revision 5 limit of 925,696
 triangles is cut to the nearest ones and reported, never dropped silently (see "Host: how it works").
 
@@ -283,7 +283,7 @@ git clone -b mc/1.12.2 https://github.com/patodois/minecraft-link
 cd minecraft-link
 export JAVA_HOME=/opt/homebrew/opt/openjdk@25                    # or any JDK 25
 ./gradlew build --no-daemon          # build/libs/minecraft-link-forge-1.12.2-0.3.0.jar (reobfuscated, link-java merged in), runs the tests
-./gradlew test --no-daemon           # 91 unit tests (and 2 more that need the Rust reference peers), no game needed
+./gradlew test --no-daemon           # 103 unit tests (and 2 more that need the Rust reference peers), no game needed
 ./gradlew runClient --no-daemon      # the real client, deobfuscated dev environment, offline dev account, -Xmx1500m
 ./gradlew runObfClient --no-daemon   # the real client with the reobfuscated release jar, as a player's game runs it
 ```
