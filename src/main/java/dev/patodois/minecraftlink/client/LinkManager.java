@@ -93,8 +93,8 @@ public final class LinkManager {
     String status() {
         Session s = session;
         if (s == null) return "not running (config role: " + settings.role + ", port " + settings.port + ")";
-        String f = s.role == Role.HOST ? "; frames drawn " + frames.framesShown + ", reprojected " + frames.framesReprojected
-                + (frames.note.isEmpty() ? "" : " (" + frames.note + ")") + ", host depth convention " + CameraSampler.hostDepthKind
+        String f = s.role == Role.HOST ? "; frames drawn " + frames.framesShown + ", reprojected " + s.frames.framesReprojected()
+                + (frames.noteFor(s).isEmpty() ? "" : " (" + frames.noteFor(s) + ")") + ", host depth convention " + CameraSampler.hostDepthKind
                 + (CameraSampler.lastRewritten ? ", camera depth_range rewritten to " + CameraSampler.lastDepthRange : ", camera depth_range " + CameraSampler.lastDepthRange) : "";
         return s.describe() + f;
     }
