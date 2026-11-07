@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "dev.patodois"
-version = "0.2.0"
+version = "0.3.0"
 
 java {
     toolchain {
@@ -38,7 +38,7 @@ val narratorShim = tasks.register<JavaCompile>("narratorShim") {
 // A plain jar file dependency (built by the included build first), not a project dependency: RetroFuturaGradle asks
 // every dependency for its "deobfuscated" variant, which a project of another build cannot offer.
 val linkJavaDir = (findProperty("linkJavaDir") ?: "../link-java").toString() // same property as settings.gradle.kts
-val linkJavaJar = file("$linkJavaDir/build/libs/link-java-0.2.0.jar")
+val linkJavaJar = file("$linkJavaDir/build/libs/link-java-0.3.0.jar")
 val buildLinkJava = gradle.includedBuild("link-java").task(":jar")
 
 dependencies {
