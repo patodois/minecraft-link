@@ -455,6 +455,9 @@ single-loader code paths they covered are unchanged and live in `common`.
   file of more than 4 Mpixels (2560 x 1600) is refused with a note in `/link status`, although the contract allows 2^26 pixels.
 - Guest frames that stop arriving are cleared after a second and the placeholder block comes back; the textures and buffers are
   released when the link stops.
+  At that moment the placeholder is a block display entity added to the level, which does not necessarily draw in the frame it is added:
+  in the in-game test one screenshot, about one game tick, showed neither the frame nor the placeholder (the 1.12.2, 1.7.10 and 1.2.5 mods
+  draw the placeholder themselves in the same frame, and show no such gap).
 - Block changes are found by rescanning (every 0.5 s by default), not by an event.
 - Mouse and keyboard other than movement stay with Minecraft when the focus is elsewhere.
 - No server-side component: it is a client mod; entities it shows exist only in your client.
