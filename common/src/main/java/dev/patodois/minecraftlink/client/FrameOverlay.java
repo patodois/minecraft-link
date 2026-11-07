@@ -4,6 +4,8 @@ import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import dev.patodois.minecraftlink.CameraRing;
+import dev.patodois.minecraftlink.FrameSource;
+import dev.patodois.minecraftlink.FrameWorker;
 import dev.patodois.minecraftlink.Reproject;
 import dev.patodois.rewritelink.LinkEvent;
 import dev.patodois.rewritelink.PixelFile;
@@ -49,16 +51,10 @@ import org.lwjgl.opengl.GL30;
  * back first and put back afterwards through {@code GlStateManager}, so the game's cache and the real state still agree.
  */
 final class FrameOverlay {
-    /** A finished frame in the present camera's view: same size as the guest image. */
-    private record Composed(long version, int width, int height, byte[] rgba, float[] depth, boolean reprojected, long guestTimeUs) {}
-
     // ---- shared
-    private final AtomicReference<Composed> composed = new AtomicReference<>();
     private final AtomicReference<Wire.Camera> present = new AtomicReference<>();
-    private volatile Thread worker;
-    private volatile boolean stop;
+    private volatile FrameWorker worker;
     volatile long framesShown;
-    volatile long framesReprojected;
     volatile String note = "";
     /** GL_VERSION, GLSL version and the like, logged once and shown by /link status. */
     volatile String glInfo = "";
@@ -68,7 +64,7 @@ final class FrameOverlay {
      * larger ones of its own accord: the reprojection runs on the CPU and keeps several copies of the frame, so a 4 Mpixel
      * frame (2560 x 1600) already costs about a hundred megabytes. A bigger file is refused with a note.
      */
-    static final long MAX_PIXELS = 4L << 20;
+    static final long MAX_PIXELS = FrameSource.MAX_PIXELS;
 
     // ---- render thread only
     private int program, vao, colorTex, depthTex;
@@ -79,123 +75,39 @@ final class FrameOverlay {
     private boolean broken;
     private ByteBuffer rgbaBuf, depthBuf;
 
+    /** What {@code /link status} says about the frames: this overlay's own note, else the one of the session's frame source. */
+    String noteFor(Session s) {
+        return note.isEmpty() ? s.frames.note() : note;
+    }
+
     void offerPresentCamera(Wire.Camera c) {
         present.set(c);
     }
 
-    /** Starts the worker for a session. */
+    /**
+     * Starts the worker for a session. Each worker has its own stop flag ({@link FrameWorker}), so one that is still inside a
+     * reprojection when the next session starts is stopped for good, and what it composes is published into its own session's
+     * {@link FrameSource}, which the renderer no longer reads.
+     */
     void start(Session s) {
         close();
-        stop = false;
         framesShown = 0;
-        framesReprojected = 0;
-        Thread t = new Thread(() -> workerLoop(s), "minecraft-link-frames");
-        t.setDaemon(true);
-        worker = t;
-        t.start();
+        s.frames.setLog(line -> LinkManager.LOG.info(line));
+        worker = new FrameWorker(s.frames, present::get, seq -> s.cameraRing.get(seq), e -> {
+            LinkManager.LOG.warn("frame worker failed", e);
+            s.frames.note("frame worker failed: " + e);
+        }).start();
     }
 
     /** Stops the worker (the render-side textures are released on the next render-thread call). */
     void close() {
-        stop = true;
-        Thread t = worker;
+        FrameWorker w = worker;
         worker = null;
-        if (t != null) t.interrupt();
-        composed.set(null);
+        if (w != null) w.stop();
         needRelease = true;
     }
 
     private volatile boolean needRelease;
-
-    // ------------------------------------------------------------------ worker
-
-    private void workerLoop(Session s) {
-        PixelFile.Reader reader = null;
-        String readerPath = null;
-        PixelFile.Frame current = null;
-        long currentVersion = 0, composedFor = -1;
-        int composedCameraSeq = Integer.MIN_VALUE;
-        byte[] outRgba = null;
-        float[] outDepth = null;
-        long version = 0;
-        String failedPath = null;
-        try {
-            while (!stop) {
-                var fc = s.frameChannel.get();
-                String wantPath = fc == null ? null : fc.path();
-                if (wantPath == null ? readerPath != null : !wantPath.equals(readerPath)) {
-                    if (reader != null) reader.close();
-                    reader = null;
-                    readerPath = null;
-                    current = null;
-                    if (wantPath != null && !wantPath.equals(failedPath)) {
-                        try {
-                            reader = PixelFile.Reader.open(Path.of(wantPath));
-                            if ((long) reader.width * reader.height > MAX_PIXELS) {
-                                String why = reader.width + "x" + reader.height + " is more than the " + MAX_PIXELS + " pixels this mod takes";
-                                reader.close();
-                                reader = null;
-                                throw new java.io.IOException(why);
-                            }
-                            readerPath = wantPath;
-                            LinkManager.LOG.info("pixel file {} mapped: {}x{}, {} slots, depth plane: {}", wantPath, reader.width, reader.height,
-                                    reader.slots, reader.hasDepth());
-                            note = "pixel file " + reader.width + "x" + reader.height + (reader.hasDepth() ? " with depth" : " colour only");
-                        } catch (java.io.IOException | RuntimeException e) {
-                            failedPath = wantPath;
-                            note = "cannot use the pixel file: " + e.getMessage();
-                            LinkManager.LOG.warn("cannot use the pixel file {}: {}", wantPath, e.toString());
-                        }
-                    }
-                }
-                LinkEvent.Frame ev = s.latestFrame.getAndSet(null);
-                if (ev != null && reader != null) {
-                    Wire.FrameReady fr = ev.frame();
-                    // The size-aware call: a frame whose datagram size disagrees with its slot header is skipped (CONTRACT 9.6, reader step 2).
-                    PixelFile.Frame f = reader.read(fr, true);
-                    if (f != null) {
-                        current = f;
-                        currentVersion++;
-                    }
-                }
-                Wire.Camera pc = present.get();
-                if (current != null && pc != null) {
-                    int camKey = System.identityHashCode(pc);
-                    if (currentVersion != composedFor || camKey != composedCameraSeq) {
-                        composedFor = currentVersion;
-                        composedCameraSeq = camKey;
-                        CameraRing.Entry rc = s.cameraRing.get(current.cameraSeq());
-                        int n = current.width() * current.height();
-                        boolean reproject = rc != null && current.depth() != null;
-                        if (reproject) {
-                            if (outRgba == null || outRgba.length != n * 4) {
-                                outRgba = new byte[n * 4];
-                                outDepth = new float[n];
-                            }
-                            Reproject.run(current.rgba(), current.depth(), current.width(), current.height(), rc.view(), rc.proj(), pc.view(),
-                                    pc.proj(), current.width(), current.height(), outRgba, outDepth);
-                            composed.set(new Composed(++version, current.width(), current.height(), outRgba.clone(), outDepth.clone(), true,
-                                    current.timeUs()));
-                            framesReprojected++;
-                        } else {
-                            composed.set(new Composed(++version, current.width(), current.height(), current.rgba(), current.depth(), false,
-                                    current.timeUs()));
-                        }
-                    }
-                }
-                try {
-                    Thread.sleep(2);
-                } catch (InterruptedException e) {
-                    break;
-                }
-            }
-        } catch (RuntimeException e) {
-            LinkManager.LOG.warn("frame worker failed", e);
-            note = "frame worker failed: " + e;
-        } finally {
-            if (reader != null) reader.close();
-        }
-    }
 
     // ------------------------------------------------------------------ render thread
 
@@ -272,8 +184,11 @@ final class FrameOverlay {
         releaseIfNeeded();
         // Frames that stopped arriving are not drawn: the last picture must not hang in the world (and the placeholder is back, see visible()).
         if (!s.framesFresh()) return;
-        Composed c = composed.get();
-        if (c == null && uploadedVersion == 0) return;
+        FrameSource.Composed c = s.frames.composed();
+        if (c == null) {
+            uploadedVersion = 0; // the channel changed, or the session ended: what was uploaded belongs to the past
+            return;
+        }
         RenderTarget target = mc.getMainRenderTarget();
         if (target.width <= 0 || target.height <= 0 || !target.useDepth) return;
         Saved saved = null;
@@ -320,7 +235,7 @@ final class FrameOverlay {
     }
 
     /** Uploads a finished frame to the two textures (created or resized as needed). Texture unit 1 and 2 are used; the caller restores them. */
-    private void upload(Composed c) {
+    private void upload(FrameSource.Composed c) {
         GlStateManager._pixelStore(GL11.GL_UNPACK_ALIGNMENT, 1);
         GlStateManager._pixelStore(GL11.GL_UNPACK_ROW_LENGTH, 0);
         GlStateManager._pixelStore(GL11.GL_UNPACK_SKIP_PIXELS, 0);
