@@ -3,10 +3,13 @@ package dev.patodois.minecraftlink;
 import dev.patodois.rewritelink.PixelFile;
 import dev.patodois.rewritelink.Wire;
 import java.io.IOException;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.IntFunction;
+import java.util.function.LongSupplier;
 
 /**
  * The guest's frames, from the announcements of the link to the finished image the renderer uploads. It has no OpenGL and no
@@ -38,8 +41,10 @@ public final class FrameSource {
         public final float[] depth;
         public final boolean reprojected;
         public final long guestTimeUs;
+        /** The generation (channel, or session) the image belongs to. */
+        public final long generation;
 
-        Composed(long version, int width, int height, byte[] rgba, float[] depth, boolean reprojected, long guestTimeUs) {
+        Composed(long version, int width, int height, byte[] rgba, float[] depth, boolean reprojected, long guestTimeUs, long generation) {
             this.version = version;
             this.width = width;
             this.height = height;
@@ -47,6 +52,7 @@ public final class FrameSource {
             this.depth = depth;
             this.reprojected = reprojected;
             this.guestTimeUs = guestTimeUs;
+            this.generation = generation;
         }
     }
 
@@ -58,6 +64,38 @@ public final class FrameSource {
     private final long maxPixels;
     private volatile Consumer<String> log;
     private final Object lock = new Object();
+
+    /** Where the working arrays of the reprojection come from; tests replace it to make an allocation fail. */
+    private volatile IntFunction<float[]> depthArrays = new IntFunction<float[]>() {
+        @Override
+        public float[] apply(int n) {
+            return new float[n];
+        }
+    };
+
+    void allocateDepthWith(IntFunction<float[]> a) {
+        depthArrays = a;
+    }
+
+    void clockWith(LongSupplier c) {
+        clock = c;
+    }
+
+    /** How the pixel file is opened; tests replace it to make the opening fail. */
+    interface Opener {
+        PixelFile.Reader open(java.nio.file.Path path) throws IOException;
+    }
+
+    private volatile Opener opener = new Opener() {
+        @Override
+        public PixelFile.Reader open(java.nio.file.Path path) throws IOException {
+            return PixelFile.Reader.open(path);
+        }
+    };
+
+    void openWith(Opener o) {
+        opener = o;
+    }
 
     /** How an announcement is read from the pixel file; tests replace it to make a read fail. */
     interface Read {
@@ -85,7 +123,17 @@ public final class FrameSource {
     private Composed composed;
     private long version;
 
-    private volatile long lastValidMs;
+    /** How long, after the last published frame, the picture counts as being on screen: the guest that stops sending is gone after this. */
+    static final long FRESH_NANOS = 1_000_000_000L;
+    /** The monotonic clock of the freshness (nanoseconds); tests replace it. A wall clock that goes back would keep a stale state. */
+    private volatile LongSupplier clock = new LongSupplier() {
+        @Override
+        public long getAsLong() {
+            return System.nanoTime();
+        }
+    };
+    private volatile long validAt;
+    private volatile boolean hasValid;
     private volatile String note = "";
     private volatile long reprojected;
 
@@ -137,7 +185,7 @@ public final class FrameSource {
             path = newPath;
             pending.clear();
             composed = null;
-            lastValidMs = 0;
+            hasValid = false;
         }
     }
 
@@ -191,9 +239,17 @@ public final class FrameSource {
         }
     }
 
-    /** Wall-clock ms of the last frame that was copied from the current channel's file, or 0: what keeps the guest's picture on screen. */
-    public long lastValidMs() {
-        return lastValidMs;
+    /**
+     * Whether the guest's picture is on screen: a frame of the current channel was published within the last second. A guest that
+     * stays connected and stops sending is not fresh after that, and its picture is not drawn. Measured on a monotonic clock.
+     */
+    public boolean fresh() {
+        return hasValid && clock.getAsLong() - validAt < FRESH_NANOS;
+    }
+
+    /** The clock reading of the last publication that made the picture fresh (for tests). */
+    long validAt() {
+        return validAt;
     }
 
     public String note() {
@@ -238,8 +294,8 @@ public final class FrameSource {
             }
             if (gen != readerGeneration) {
                 closeReader();
+                if (want != null && failedGeneration != gen) openReader(want, gen); // a passing failure is thrown, and this is tried again
                 readerGeneration = gen;
-                if (want != null && failedGeneration != gen) openReader(want, gen);
             }
             if (reader != null && reader.isGone()) {
                 closeReader();
@@ -277,7 +333,9 @@ public final class FrameSource {
         }
         if (current != null && present != null) {
             int camKey = System.identityHashCode(present);
-            if (currentVersion != composedFor || camKey != composedCamera) {
+            // A frame not composed yet is composed; a new camera recomposes the last one only while it is on screen. A guest that stays
+            // connected and silent is not drawn, and reprojecting a picture nobody sees at every camera move costs a core and gigabytes.
+            if (currentVersion != composedFor || (camKey != composedCamera && fresh())) {
                 composedFor = currentVersion;
                 composedCamera = camKey;
                 try {
@@ -317,27 +375,47 @@ public final class FrameSource {
         return reader != null;
     }
 
+    /**
+     * Opens the pixel file of the channel. The channel ends (it is not tried again until the peer announces another) only for a
+     * refusal that the contract itself names: a file that fails the checks of section 9.6 ("Opening and creating": not absolute, not
+     * a regular file, impossible sizes, ...), one over this mod's pixel limit, or one that does not exist (a peer announces a file it
+     * has created, and the receiver skips what it finds gone). Any other failure to open (permissions, descriptors, the disk) may be
+     * passing: it is thrown to the worker, which reports it, waits and starts over from this channel.
+     */
     private void openReader(String want, long gen) {
         try {
-            reader = PixelFile.Reader.open(Paths.get(want));
+            reader = opener.open(Paths.get(want));
             readersOpened++;
             if ((long) reader.width * reader.height > maxPixels) {
                 String why = reader.width + "x" + reader.height + " is more than the " + maxPixels + " pixels this mod takes";
                 closeReader();
-                throw new IOException(why);
+                throw new PixelFile.FormatException(why);
             }
             note = "pixel file " + reader.width + "x" + reader.height + (reader.hasDepth() ? " with depth" : " colour only");
             say("pixel file " + want + " mapped: " + reader.width + "x" + reader.height + ", " + reader.slots + " slots, depth plane: " + reader.hasDepth());
+        } catch (PixelFile.FormatException e) {
+            refuse(want, gen, e);
+        } catch (NoSuchFileException e) {
+            refuse(want, gen, new IOException("no such file"));
         } catch (IOException e) {
-            failedGeneration = gen;
-            note = "cannot use the pixel file: " + e.getMessage();
-            say("cannot use the pixel file " + want + ": " + e);
-        } catch (RuntimeException e) {
-            failedGeneration = gen;
             closeReader();
-            note = "cannot use the pixel file: " + e.getMessage();
-            say("cannot use the pixel file " + want + ": " + e);
+            note = "cannot open the pixel file (trying again): " + e.getMessage();
+            say("cannot open the pixel file " + want + ", trying again: " + e);
+            throw new java.io.UncheckedIOException(e);
+        } catch (java.nio.file.InvalidPathException e) {
+            refuse(want, gen, new IOException(e.getMessage())); // a path that can never be opened
+        } catch (RuntimeException e) {
+            closeReader();
+            note = "cannot open the pixel file (trying again): " + e;
+            say("cannot open the pixel file " + want + ", trying again: " + e);
+            throw e;
         }
+    }
+
+    private void refuse(String want, long gen, IOException e) {
+        failedGeneration = gen;
+        note = "cannot use the pixel file: " + e.getMessage();
+        say("cannot use the pixel file " + want + ": " + e);
     }
 
     private void closeReader() {
@@ -349,7 +427,7 @@ public final class FrameSource {
         synchronized (lock) {
             if (generation == gen) {
                 composed = null;
-                lastValidMs = 0;
+                hasValid = false;
             }
         }
     }
@@ -361,26 +439,32 @@ public final class FrameSource {
         boolean reproject = rc != null && cur.depth() != null;
         Composed c;
         if (reproject) {
-            if (outRgba == null || outRgba.length != n * 4) {
-                outRgba = new byte[n * 4];
-                outDepth = new float[n];
+            byte[] rgbaOut = outRgba;
+            float[] depthOut = outDepth;
+            if (rgbaOut == null || rgbaOut.length != n * 4 || depthOut == null || depthOut.length != n) {
+                // Both are allocated before either is kept: an OutOfMemoryError between the two must not leave a pair that looks complete.
+                rgbaOut = new byte[n * 4];
+                depthOut = depthArrays.apply(n);
+                outRgba = rgbaOut;
+                outDepth = depthOut;
             }
             Reproject.run(cur.rgba(), cur.depth(), cur.width(), cur.height(), rc.view(), rc.proj(), present.view(), present.proj(), cur.width(), cur.height(),
-                    outRgba, outDepth);
-            c = new Composed(0, cur.width(), cur.height(), outRgba.clone(), outDepth.clone(), true, cur.timeUs());
+                    rgbaOut, depthOut);
+            c = new Composed(0, cur.width(), cur.height(), rgbaOut.clone(), depthOut.clone(), true, cur.timeUs(), gen);
         } else {
-            c = new Composed(0, cur.width(), cur.height(), cur.rgba(), cur.depth(), false, cur.timeUs());
+            c = new Composed(0, cur.width(), cur.height(), cur.rgba(), cur.depth(), false, cur.timeUs(), gen);
         }
         synchronized (lock) {
             // The reprojection can take long; if the channel changed meanwhile, this image belongs to the past. The check and the
             // publication are one step under the lock that a channel change clears the image with.
             if (generation != gen) return;
-            composed = new Composed(++version, c.width, c.height, c.rgba, c.depth, c.reprojected, c.guestTimeUs);
+            composed = new Composed(++version, c.width, c.height, c.rgba, c.depth, c.reprojected, c.guestTimeUs, gen);
             if (reproject) reprojected++;
             // Fresh only for a frame that was copied since the last publication: a new camera alone is not the guest sending.
             if (freshOnPublish) {
                 freshOnPublish = false;
-                lastValidMs = System.currentTimeMillis();
+                validAt = clock.getAsLong();
+                hasValid = true;
             }
         }
     }

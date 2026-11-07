@@ -387,7 +387,7 @@ git clone https://github.com/patodois/minecraft-link
 cd minecraft-link
 export JAVA_HOME=/opt/homebrew/opt/openjdk@25         # or any JDK 25; see "Which JDK"
 ./gradlew build --no-daemon                           # all loaders: <loader>/build/libs/minecraft-link-<loader>-26.3-0.3.0.jar, and the tests
-./gradlew :common:test --no-daemon                    # the unit tests only (107, plus 2 that need the Rust reference peers)
+./gradlew :common:test --no-daemon                    # the unit tests only (119, plus 2 that need the Rust reference peers)
 ./gradlew :fabric:runClient --no-daemon               # the real client with an offline dev account (-Xmx2G); also :neoforge: and :forge:
 ```
 

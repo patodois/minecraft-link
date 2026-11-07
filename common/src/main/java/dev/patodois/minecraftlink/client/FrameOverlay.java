@@ -92,6 +92,8 @@ final class FrameOverlay {
     private GpuBuffer ubo;
     private boolean hasDepthUploaded;
     private boolean broken;
+    /** The generation the uploaded texture belongs to: a texture of a channel that has ended is not drawn. */
+    private long uploadedGeneration = -1;
 
     /** What {@code /link status} says about the frames: this overlay's own note, else the one of the session's frame source. */
     String noteFor(Session s) {
@@ -148,7 +150,7 @@ final class FrameOverlay {
      * in-game test one screenshot at that moment (about one game tick) showed neither. Render thread.
      */
     boolean visible(Session s) {
-        return !broken && colorView != null && uploadedVersion != 0 && s.framesFresh();
+        return !broken && colorView != null && uploadedVersion != 0 && s.frames.generation() == uploadedGeneration && s.framesFresh();
     }
 
     /** Start of a frame, no render pass open: upload the newest finished frame. */
@@ -161,6 +163,7 @@ final class FrameOverlay {
                 uploadedVersion = 0; // the channel changed, or the session ended: what was uploaded belongs to the past
                 return;
             }
+            if (!s.framesFresh()) return; // an image nobody draws is not sent to the GPU
             if (c.version == uploadedVersion) return;
             GpuDevice dev = RenderSystem.getDevice();
             if (colorTex == null || texW != c.width || texH != c.height) {
@@ -188,7 +191,8 @@ final class FrameOverlay {
                 enc.writeToTexture(depthTex, depthBuf, 0, 0, 0, 0, c.width, c.height);
             }
             uploadedVersion = c.version;
-        } catch (RuntimeException e) {
+            uploadedGeneration = c.generation;
+        } catch (RuntimeException | Error e) {
             broken = true;
             note = "frame upload failed: " + e;
             LinkManager.LOG.error("frame upload failed, frames are off for this run", e);
@@ -224,7 +228,7 @@ final class FrameOverlay {
                 pass.draw(3, 1, 0, 0);
             }
             framesShown++;
-        } catch (RuntimeException e) {
+        } catch (RuntimeException | Error e) {
             broken = true;
             note = "frame pass failed: " + e;
             LinkManager.LOG.error("the frame pass failed, frames are off for this run", e);
