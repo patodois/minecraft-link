@@ -4,12 +4,12 @@
 
 A client-side mod for Minecraft: Java Edition on **Fabric** (and **Quilt**, with the same jar), **NeoForge** and **Forge** that speaks the
 **rewrite-bridge passthrough link protocol v1** (`docs/CONTRACT.md` in the `rewrite-bridge`
-repository, revision 6), so a running Minecraft can be a **host** or a **guest** next to any other
+repository, revision 7), so a running Minecraft can be a **host** or a **guest** next to any other
 game or rewrite that speaks it: the Rust tools, the Hytale plugin, anything else.
 
 **Adding this to a game.** Read the [guide to adding a game](https://github.com/patodois/rewrite-bridge/blob/main/docs/INTEGRATING.md) first. This mod is its worked example of a Java host and guest: it bundles link-java and, per this README, is built and tested on Fabric (and Quilt), NeoForge and Forge.
 
-**Status.** Version **0.2.0** (link-java 0.2.0, contract revision 6), released as [mc-26.3-v0.2.0](https://github.com/patodois/minecraft-link/releases/tag/mc-26.3-v0.2.0): the optional link token, **off by default**, see "Link token" below. The
+**Status.** Version **0.3.0** is the work in progress, not released: contract revision 7 and link-java 0.3.0 (the guest's frames are presented with the ordered read, `PixelFile.Reader.readLatest`, and everything of a pixel channel is dropped when the channel changes or the session ends, see "Guest frames"). The latest release is version **0.2.0** (link-java 0.2.0, contract revision 6), released as [mc-26.3-v0.2.0](https://github.com/patodois/minecraft-link/releases/tag/mc-26.3-v0.2.0): the optional link token, **off by default**, see "Link token" below. The
 previous release is [mc-26.3-v0.1.2](https://github.com/patodois/minecraft-link/releases/tag/mc-26.3-v0.1.2) (link-java 0.1.3, revision 5, live interop matrix 50/50 pairs on 2026-10-26). What 0.1.2 changed: guest frames are read with link-java's size-aware call, so a
 frame whose `Frame` datagram disagrees with its slot header is skipped (contract 9.6); and a collision snapshot over the revision 5 limit of 925,696
 triangles is cut to the nearest ones and reported, never dropped silently (see "Host: how it works").
@@ -71,7 +71,7 @@ Tested with Minecraft **26.3**, JDK 25 (see "Which JDK"), Gradle 9.8.2 and, per 
 | Forge | 66.1.0 | ForgeGradle 7.0.40, JarJar plugin 0.2.3 |
 
 One version number (`mod_version` in `gradle.properties`) goes into every jar. The jars carry the Minecraft version in
-their name: `minecraft-link-<loader>-<minecraft version>-<version>.jar`, for example `minecraft-link-fabric-26.3-0.2.0.jar`.
+their name: `minecraft-link-<loader>-<minecraft version>-<version>.jar`, for example `minecraft-link-fabric-26.3-0.3.0.jar`.
 
 ## What this mod is not
 
@@ -127,10 +127,10 @@ once (`./gradlew build`, see "Build and test"); a build leaves them in `<loader>
 
 | Instance runs | Drop this jar into the instance's `mods` folder | Also needed |
 |---|---|---|
-| Fabric | `fabric/build/libs/minecraft-link-fabric-26.3-0.2.0.jar` | [Fabric API](https://modrinth.com/mod/fabric-api) for 26.3 |
+| Fabric | `fabric/build/libs/minecraft-link-fabric-26.3-0.3.0.jar` | [Fabric API](https://modrinth.com/mod/fabric-api) for 26.3 |
 | Quilt | the same Fabric jar | the Fabric API jar (Quilted Fabric API has no 26.x release) |
-| NeoForge | `neoforge/build/libs/minecraft-link-neoforge-26.3-0.2.0.jar` | nothing |
-| Forge | `forge/build/libs/minecraft-link-forge-26.3-0.2.0.jar` | nothing |
+| NeoForge | `neoforge/build/libs/minecraft-link-neoforge-26.3-0.3.0.jar` | nothing |
+| Forge | `forge/build/libs/minecraft-link-forge-26.3-0.3.0.jar` | nothing |
 
 Use exactly these jars, the ones without a suffix. The `-sources` jars are for reading, and the Forge build also leaves a
 `-slim` jar without link-java: do not use that one.
@@ -313,9 +313,9 @@ is shown, not roll. While a guest's frames are on screen the placeholder is hidd
 
 1. `frame_channel` names the pixel file; the frame worker maps it read-only (`PixelFile.Reader` in
    link-java: all header and depth checks of the contract, the seqlock, an unknown `depth_format` read as colour only).
-2. On each `Frame` it copies the slot with the size-aware call `reader.read(frame, true)` (link-java 0.1.3: a frame is skipped, before any pixel is copied,
-   when its datagram's width or height is 0 or above the file's, or differs from the slot header's; frame 0 is always skipped), looks `camera_seq` up in a ring of the last 256 cameras sent (a second at 240 fps; the contract asks for half a second) and reprojects the
+2. On each `Frame` it copies the slot with the ordered call `reader.readLatest(frame, true)` (link-java 0.3.0: a frame is skipped, before any pixel is copied, when its datagram's width or height is 0 or above the file's, or differs from the slot header's, when its number is 0, and when it is not newer than the last one shown from this file; only the newest announcement is kept while the worker is busy, so a late older `Frame` datagram is not what gets read), looks `camera_seq` up in a ring of the last 256 cameras sent (a second at 240 fps; the contract asks for half a second) and reprojects the
    frame (colour and linear depth in metres) from that camera to the one being presented now (`Reproject`, on a helper thread).
+   A new `frame_channel`, the end of the session, or a pixel file that has shrunk drops the reader, the pending announcement and the finished image at once (a worker still reprojecting cannot publish it afterwards), and the picture of the old channel is not drawn: the placeholder is back until a frame of the new channel has been read.
 3. At the start of a frame the render thread uploads the result to an RGBA8 and an R32F texture. After the main pass of the
    level it draws one fullscreen pass (`assets/minecraft_link/shaders/core/link_frame.fsh`) that converts Minecraft's depth buffer to linear metres with the contract's
    formulas for its convention and keeps the guest's pixel only where it is nearer than the world, with straight-alpha blending.
@@ -382,12 +382,12 @@ You need git, a JDK ("Which JDK" below), and `link-java` next to this repository
 not downloaded from anywhere else):
 
 ```sh
-git clone https://github.com/patodois/link-java       # the protocol library, a sibling directory of minecraft-link
+git clone --branch v0.3.0 https://github.com/patodois/link-java       # the protocol library, a sibling directory of minecraft-link
 git clone https://github.com/patodois/minecraft-link
 cd minecraft-link
 export JAVA_HOME=/opt/homebrew/opt/openjdk@25         # or any JDK 25; see "Which JDK"
-./gradlew build --no-daemon                           # all loaders: <loader>/build/libs/minecraft-link-<loader>-26.3-0.2.0.jar, and the tests
-./gradlew :common:test --no-daemon                    # the unit tests only (81, plus 2 that need the Rust reference peers)
+./gradlew build --no-daemon                           # all loaders: <loader>/build/libs/minecraft-link-<loader>-26.3-0.3.0.jar, and the tests
+./gradlew :common:test --no-daemon                    # the unit tests only (88, plus 2 that need the Rust reference peers)
 ./gradlew :fabric:runClient --no-daemon               # the real client with an offline dev account (-Xmx2G); also :neoforge: and :forge:
 ```
 

@@ -1,6 +1,7 @@
 package dev.patodois.minecraftlink.client;
 
 import dev.patodois.minecraftlink.CollisionCap;
+import dev.patodois.minecraftlink.FrameSource;
 import dev.patodois.minecraftlink.LinkSettings;
 import dev.patodois.minecraftlink.Mapping;
 import dev.patodois.minecraftlink.PoseTrack;
@@ -86,18 +87,15 @@ final class Session {
     final Map<Long, Remote> remotes = new ConcurrentHashMap<>();
     final ConcurrentLinkedQueue<Remote> discarded = new ConcurrentLinkedQueue<>();
     final ConcurrentLinkedQueue<String> messages = new ConcurrentLinkedQueue<>();
-    final AtomicReference<Control.FrameChannel> frameChannel = new AtomicReference<>();
-    final AtomicReference<LinkEvent.Frame> latestFrame = new AtomicReference<>();
+    /** The guest's frames, from the announcements to the finished image (see {@link FrameSource}); the frame worker steps it. */
+    final FrameSource frames = new FrameSource();
     volatile LinkEvent.PeerInfo peer;
     volatile Role focus = Role.HOST;
     volatile boolean closed;
     volatile int lastCameraSeq;
-    /** Wall-clock ms of the last Frame datagram; while frames flow the placeholder block is hidden. */
-    volatile long lastFrameMs;
-
-    /** Whether the guest's own frames are on screen: they are arriving and {@code show_frames} lets the host draw them. */
+    /** Whether the guest's own frames are on screen: a frame of the current channel was read lately and {@code show_frames} lets the host draw them. */
     boolean framesFresh() {
-        return settings.showFrames && System.currentTimeMillis() - lastFrameMs < 1000;
+        return settings.showFrames && System.currentTimeMillis() - frames.lastValidMs() < 1000;
     }
 
     final AtomicLong camerasSent = new AtomicLong();
@@ -265,8 +263,7 @@ final class Session {
             focus = Role.HOST;
             for (Remote r : remotes.values()) discarded.add(r);
             remotes.clear();
-            frameChannel.set(null);
-            latestFrame.set(null);
+            frames.lost();
             collisionOut.set(null);
             cameraOut.set(null);
             poseOut.set(null);
@@ -306,13 +303,12 @@ final class Session {
                 messages.add("input focus is now with the " + f.focus().wire);
             }
         } else if (e instanceof LinkEvent.FrameChannel fc) {
-            frameChannel.set(fc.channel());
+            frames.channel(fc.channel().path());
             messages.add("peer announced a pixel file: " + fc.channel().path() + " " + fc.channel().width() + "x"
                     + fc.channel().height());
         } else if (e instanceof LinkEvent.Frame f) {
             framesReceived.incrementAndGet();
-            lastFrameMs = System.currentTimeMillis();
-            latestFrame.set(f);
+            frames.announce(f.frame());
         }
     }
 
