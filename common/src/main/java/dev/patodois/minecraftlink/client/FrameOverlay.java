@@ -361,7 +361,7 @@ final class FrameOverlay {
      * been uploaded. {@link RemoteEntities} hides the placeholder exactly then, so the overlay and the placeholder never show
      * together. The other way round is not guaranteed: when the frames stop, the placeholder is a block display entity that is added
      * to the level in that very frame, and a display added to the level does not necessarily draw in the frame it is added; in the
-     * in-game test one screenshot at that moment (about one game tick) showed neither. Render thread.
+     * in-game test about half of the trials had a screenshot at that moment with neither (up to about 300 ms from the last frame to the first placeholder). Render thread.
      */
     boolean visible(Session s) {
         return !broken && colorTex != 0 && uploadedVersion != 0 && s.framesFresh();
