@@ -1,5 +1,7 @@
 # minecraft-link
 
+minecraft-link is a Minecraft: Java Edition client mod for players and mod developers to connect Minecraft as a host or guest to other games through the rewrite-bridge passthrough link protocol.
+
 **NOT AN OFFICIAL MINECRAFT PRODUCT. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT.**
 
 A client-side mod for Minecraft: Java Edition on **Fabric** (and **Quilt**, with the same jar), **NeoForge** and **Forge** that speaks the
